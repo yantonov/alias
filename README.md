@@ -6,7 +6,7 @@ Using this app you can define aliases and use it with corresponding program.
 
 Usage:
 1. Put the executable to path
-2. Write config and put it near the executable
+2. Write config (config.toml) and put it near the executable
 3. Use custom aliases
 
 Sample config can be found [here](https://github.com/yantonov/aliases_experimental/raw/master/sample_config.toml).
