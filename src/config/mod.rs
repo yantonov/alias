@@ -19,7 +19,6 @@ impl Configuration {
 
 pub fn read_configuration(executable_dir: PathBuf) -> Configuration {
     let config_file_path = executable_dir.as_path().join("config.toml");
-    // println!("{:?}", config_file_path.exists());
 
     let contents = fs::read_to_string(config_file_path)
         .expect("Something went wrong reading the config file");
