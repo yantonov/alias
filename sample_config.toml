@@ -1,4 +1,4 @@
-executable="git"
+executable="/usr/bin/git"
 
 [alias]
 test_alias1="branch"
