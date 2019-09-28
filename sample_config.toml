@@ -1,0 +1,5 @@
+executable="git"
+
+[alias]
+test_alias1="branch"
+test_alias2="!echo 'test' $1 $2 $3"
