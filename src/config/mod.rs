@@ -49,8 +49,9 @@ pub fn read_configuration(executable_dir: PathBuf) -> Configuration {
         .as_path()
         .join("config.toml");
 
-    if !config_file_path.exists() {
-        panic!("config.toml file was not found")
+    let p = config_file_path.as_path();
+    if !p.exists() {
+        panic!("'{}' config file was not found", p.to_str().unwrap())
     }
 
     let contents = fs::read_to_string(config_file_path)
