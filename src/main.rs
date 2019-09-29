@@ -15,9 +15,7 @@ fn main() {
     let aliased_command = configuration.get_alias(&call_arguments[0]);
 
     match aliased_command {
-        Some(value) => {
-            let alias = value.as_str().unwrap();
-
+        Some(alias) => {
             if alias.starts_with("!") {
                 let shell_command: String = alias.chars().skip(1).collect();
                 let shell = environment.get_shell();

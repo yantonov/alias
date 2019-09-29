@@ -15,22 +15,32 @@ impl Configuration {
             .expect(&format!("key '{}' was not found at configuration file", key));
     }
 
-    fn get_string_key(&self, key: &str) -> &str {
-        return self
-            .get_key(key)
+    fn value_as_str<'a>(&self, key: &str, value: &'a Value) -> &'a str {
+        return value
             .as_str()
             .expect(&format!("'{}' key has no string type", key));
     }
 
     pub fn get_executable(&self) -> &str {
-        return self
-            .get_string_key("executable");
+        let key = "executable";
+        return self.value_as_str(
+            key,
+            self.get_key(key))
     }
 
-    pub fn get_alias(&self, command: &str) -> Option<&Value> {
-        return self
+    pub fn get_alias(&self, command: &str) -> Option<&str> {
+        let alias = self
             .get_key("alias")
             .get(command);
+
+        match alias {
+            Some(a) => {
+                return Some(self.value_as_str(command, a));
+            }
+            None => {
+                return None;
+            }
+        }
     }
 }
 
