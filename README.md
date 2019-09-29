@@ -5,7 +5,7 @@ Let's suppose that git or mercurial, for example, has no alias support.
 Using this app you can define aliases and use it with corresponding program.
 
 Usage:
-1. Put the executable to path
+1. Put the executable to path, and name it the same as cli program without alias support
 2. Write config (config.toml) and put it near the executable
 3. Use custom aliases
 
