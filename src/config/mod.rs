@@ -7,6 +7,11 @@ pub struct Configuration {
     config: Value
 }
 
+pub enum Alias {
+    ShellAlias(String),
+    RegularAlias(Vec<String>)
+}
+
 impl Configuration {
     fn get_key(&self, key: &str) -> &Value {
         return self
@@ -28,14 +33,29 @@ impl Configuration {
             self.get_key(key))
     }
 
-    pub fn get_alias(&self, command: &str) -> Option<&str> {
+    pub fn get_alias(&self, command: &str) -> Option<Alias> {
         let alias = self
             .get_key("alias")
             .get(command);
 
         match alias {
             Some(a) => {
-                return Some(self.value_as_str(command, a));
+                let alias_value = self.value_as_str(command, a);
+                if alias_value.starts_with("!") {
+                    let shell_command: String = alias_value
+                        .chars()
+                        .skip(1)
+                        .collect();
+                    return Some(Alias::ShellAlias(shell_command));
+                }
+                else {
+                    let alias_arguments: Vec<String> = alias_value
+                        .split(" ")
+                        .into_iter()
+                        .map(|t| t.to_string())
+                        .collect();
+                    return Some(Alias::RegularAlias(alias_arguments));
+                }
             }
             None => {
                 return None;
