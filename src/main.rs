@@ -3,17 +3,17 @@ mod environment;
 mod process;
 
 use config::Alias::{ShellAlias, RegularAlias};
+use process::CallContext;
 
-fn main() {
-    let environment = environment::get_environment();
-    let configuration = config::read_configuration(environment.executable_dir());
-
+pub fn get_call_context(environment: &environment::Environment,
+                        configuration: &config::Configuration) -> CallContext {
     let call_arguments = environment.get_call_arguments();
     if call_arguments.len() == 0 {
-        return;
+        return CallContext {
+            executable: configuration.get_executable(),
+            args: Vec::new()
+        };
     }
-
-    let executable = configuration.get_executable();
     let aliased_command = configuration.get_alias(&call_arguments[0]);
 
     match aliased_command {
@@ -28,7 +28,10 @@ fn main() {
                     for p in &call_arguments[1..call_arguments.len()] {
                         args.push(&p);
                     }
-                    process::execute(&shell, args);
+                    return CallContext {
+                        executable: shell,
+                        args: args.iter().map(|t| t.to_string()).collect()
+                    };
                 }
                 RegularAlias(alias_arguments) => {
                     let mut args = Vec::new();
@@ -38,12 +41,25 @@ fn main() {
                     for p in &call_arguments[1..call_arguments.len()] {
                         args.push(p.to_string());
                     }
-                    process::execute(executable, args);
+                    return CallContext {
+                        executable: configuration.get_executable(),
+                        args: args
+                    };
                 }
             }
         }
         None => {
-            process::execute(executable, call_arguments);
+            return CallContext {
+                executable: configuration.get_executable(),
+                args: Vec::new()
+            };
         }
     }
+}
+
+fn main() {
+    let environment = environment::get_environment();
+    let configuration = config::read_configuration(environment.executable_dir());
+    let call_context = get_call_context(&environment, &configuration);
+    process::execute(&call_context);
 }

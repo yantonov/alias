@@ -26,11 +26,13 @@ impl Configuration {
             .expect(&format!("'{}' key has no string type", key));
     }
 
-    pub fn get_executable(&self) -> &str {
+    pub fn get_executable(&self) -> String {
         let key = "executable";
-        return self.value_as_str(
-            key,
-            self.get_key(key))
+        return self
+            .value_as_str(
+                key,
+                self.get_key(key))
+            .to_string()
     }
 
     pub fn get_alias(&self, command: &str) -> Option<Alias> {
