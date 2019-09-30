@@ -17,7 +17,10 @@ fn main() {
     match aliased_command {
         Some(alias) => {
             if alias.starts_with("!") {
-                let shell_command: String = alias.chars().skip(1).collect();
+                let shell_command: String = alias
+                    .chars()
+                    .skip(1)
+                    .collect();
                 let shell = environment.get_shell();
                 let mut args = Vec::new();
                 args.push("-c");
@@ -30,7 +33,10 @@ fn main() {
             }
             else {
                 let mut args = Vec::new();
-                args.push(alias);
+                let alias_arguments: Vec<&str> = alias.split(" ").collect();
+                for a in alias_arguments {
+                    args.push(a);
+                }
                 for p in &call_arguments[1..call_arguments.len()] {
                     args.push(&p);
                 }
