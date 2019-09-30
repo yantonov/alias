@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::io::{self, Write};
 use std::ffi::OsStr;
 
@@ -8,6 +8,7 @@ where I: IntoIterator<Item = S>,
 {
     let output = Command::new(executable)
         .args(args)
+        .stdout(Stdio::inherit())
         .output()
         .expect("failed to execute process");
 
