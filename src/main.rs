@@ -49,9 +49,13 @@ pub fn get_call_context(environment: &environment::Environment,
             }
         }
         None => {
+            let mut args = Vec::new();
+            for p in call_arguments {
+                args.push(p.to_string());
+            }
             return CallContext {
                 executable: configuration.get_executable(),
-                args: Vec::new()
+                args: args
             };
         }
     }
