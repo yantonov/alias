@@ -2,7 +2,8 @@ This app helps you to define custom alias to command line utility which has no [
 
 Motivation: 
 Let's suppose that git or mercurial, for example, has no alias support.  
-Using this app you can define aliases and use it with corresponding program.
+Using this app you can define aliases and use it with corresponding program.  
+Technically is just a thin wrapper to conditionally run target program.  
 
 Usage:
 1. Put the executable to path, and name it the same as cli program without alias support
