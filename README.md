@@ -1,8 +1,9 @@
 This app helps you to define custom alias to command line utility which has no [alias support](https://git-scm.com/docs/git-config#Documentation/git-config.txt-alias).
 
 Motivation: 
-Let's suppose that git or mercurial, for example, has no alias support.  
-Using this app you can define aliases and use it with corresponding program.  
+Let's suppose that command line utility has no alias support like git.  
+Using this app you can define aliases (including shell aliases) and use it with any program.
+
 Technically is just a thin wrapper to conditionally run target program.  
 
 Usage:
