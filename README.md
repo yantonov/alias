@@ -7,7 +7,7 @@ Using this app you can define aliases (including shell aliases) and use it with 
 Technically is just a thin wrapper to conditionally run target program.  
 
 This app is independent from 
-1. the target program with needs for aliases support
+1. the target program which needs for aliases support
 2. operating system
 3. command interpreter
 
