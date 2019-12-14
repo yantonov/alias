@@ -17,3 +17,4 @@ Usage:
 3. Use custom aliases
 
 Sample config can be found [here](https://github.com/yantonov/alias/blob/master/sample_config.toml).
+A little bit more realistic example - [arc aliases](https://github.com/yantonov/arc-aliases)
