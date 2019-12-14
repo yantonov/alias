@@ -16,4 +16,4 @@ Usage:
 2. Write config (config.toml) and put it near the executable
 3. Use custom aliases
 
-Sample config can be found [here](https://github.com/yantonov/aliases_experimental/raw/master/sample_config.toml).
+Sample config can be found [here](https://github.com/yantonov/alias/blob/master/sample_config.toml).
