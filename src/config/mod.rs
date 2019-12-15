@@ -1,5 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
+use std::fs::File;
+use std::io::Write;
 
 use toml::Value;
 
@@ -67,13 +69,25 @@ impl Configuration {
 }
 
 pub fn read_configuration(executable_dir: PathBuf) -> Configuration {
+    let config_file_name = "config.toml";
+
     let config_file_path = executable_dir
         .as_path()
-        .join("config.toml");
+        .join(config_file_name);
 
     let p = config_file_path.as_path();
     if !p.exists() {
-        panic!("'{}' config file was not found", p.to_str().unwrap())
+        let mut f = File::create(p).expect(format!("Unable to create {} file", config_file_name));
+        let sample_config_content = [
+            "executable=\"/bin/bash\"",
+            "",
+            "[alias]",
+            "test_alias1=\"--help\""
+        ];
+        for line in &sample_config_content {
+            f.write_all(line.as_bytes()).expect("Unable to write data");
+            f.write_all("\n".as_bytes()).expect("Unable to write data");
+        }
     }
 
     let contents = fs::read_to_string(config_file_path)
