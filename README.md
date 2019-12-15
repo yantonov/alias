@@ -16,5 +16,5 @@ Usage:
 2. Write config (config.toml) and put it near the executable
 3. Use custom aliases just like if they are supported out of the box. So you don't need to pollute global namespace with shell aliases (bashrc/.profile etc).
 
-Sample config can be found [here](https://github.com/yantonov/alias/blob/master/sample_config.toml).
+Sample config can be found [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml).
 A little bit more realistic example - [arc aliases](https://github.com/yantonov/arc-aliases)
