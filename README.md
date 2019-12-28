@@ -18,4 +18,5 @@ Usage:
 3. Use custom aliases just like if they are supported out of the box. So you don't need to pollute global namespace with shell aliases (bashrc/.profile etc).
 
 Sample config can be found [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml).  
-A little bit more realistic example - [arc aliases](https://github.com/yantonov/arc-aliases)
+A little bit more realistic example - [arc aliases](https://github.com/yantonov/arc-aliases)  
+It is possible to reference target executable using environment variables (example: executable="${HOME}/tools/bin/app")  

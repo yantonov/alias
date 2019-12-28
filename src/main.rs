@@ -4,13 +4,14 @@ mod process;
 
 use config::Alias::{ShellAlias, RegularAlias};
 use process::CallContext;
+use environment::expand_env_var;
 
 pub fn get_call_context(environment: &environment::Environment,
                         configuration: &config::Configuration) -> CallContext {
     let call_arguments = environment.get_call_arguments();
     if call_arguments.len() == 0 {
         return CallContext {
-            executable: configuration.get_executable(),
+            executable: expand_env_var(&configuration.get_executable()),
             args: Vec::new()
         };
     }
@@ -42,7 +43,7 @@ pub fn get_call_context(environment: &environment::Environment,
                         args.push(p.to_string());
                     }
                     return CallContext {
-                        executable: configuration.get_executable(),
+                        executable: expand_env_var(&configuration.get_executable()),
                         args: args
                     };
                 }
@@ -54,7 +55,7 @@ pub fn get_call_context(environment: &environment::Environment,
                 args.push(p.to_string());
             }
             return CallContext {
-                executable: configuration.get_executable(),
+                executable: expand_env_var(&configuration.get_executable()),
                 args: args
             };
         }
