@@ -77,7 +77,7 @@ pub fn read_configuration(executable_dir: PathBuf) -> Configuration {
 
     let p = config_file_path.as_path();
     if !p.exists() {
-        let mut f = File::create(p).expect(format!("Unable to create {} file", config_file_name));
+        let mut f = File::create(p).expect(&format!("Unable to create {} file", config_file_name));
         let sample_config_content = [
             "executable=\"/bin/bash\"",
             "",
