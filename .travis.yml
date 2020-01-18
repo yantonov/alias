@@ -11,9 +11,7 @@ script:
   - cargo build --verbose --workspace --release
   - cargo test --verbose --all
 
-before_deploy:
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then mv target/release/alias target/release/alias_osx ; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then mv target/release/alias target/release/alias_linux ; fi
+before_deploy: "mv target/release/alias target/release/alias_$TRAVIS_OS_NAME"
 
 deploy:
   provider: releases
