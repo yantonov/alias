@@ -1,0 +1,28 @@
+language: rust
+
+rust:
+  - stable
+
+os:
+  - linux
+  - osx
+
+script:
+  - cargo build --verbose --workspace --release
+  - cargo test --verbose --all
+
+before_deploy:
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then mv target/release/alias target/release/alias_osx ; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then mv target/release/alias target/release/alias_linux ; fi
+
+deploy:
+  provider: releases
+  api_key: $GITHUB_OAUTH_TOKEN
+  overwrite: false
+  file_glob: true
+  file:
+    - target/release/alias_*
+  skip_cleanup: true
+  draft: true
+  on:
+    tags: true

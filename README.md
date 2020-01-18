@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/yantonov/alias.svg?branch=master)](https://travis-ci.com/yantonov/alias)
+
 This app helps you to define custom alias to command line utility which has no [alias support](https://git-scm.com/docs/git-config#Documentation/git-config.txt-alias).
 
 Motivation: 
