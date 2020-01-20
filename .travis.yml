@@ -11,7 +11,7 @@ script:
   - cargo build --verbose --workspace --release
   - cargo test --verbose --all
 
-before_deploy: "mv target/release/alias target/release/alias_$TRAVIS_OS_NAME"
+before_deploy: "mv target/release/alias target/release/alias_$TRAVIS_OS_NAME_$TRAVIS_TAG"
 
 deploy:
   provider: releases
