@@ -1,2 +1,9 @@
+# build artifacts
 /target
+
+# temporary files
 **/*.rs.bk
+
+# ide files
+.idea/
+
