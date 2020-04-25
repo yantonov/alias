@@ -1,7 +1,7 @@
 use std::fs;
-use std::path::PathBuf;
 use std::fs::File;
 use std::io::Write;
+use std::path::PathBuf;
 
 use toml::Value;
 
@@ -11,7 +11,7 @@ pub struct Configuration {
 
 pub enum Alias {
     ShellAlias(String),
-    RegularAlias(Vec<String>)
+    RegularAlias(Vec<String>),
 }
 
 impl Configuration {
@@ -34,7 +34,7 @@ impl Configuration {
             .value_as_str(
                 key,
                 self.get_key(key))
-            .to_string()
+            .to_string();
     }
 
     pub fn get_alias(&self, command: &str) -> Option<Alias> {
@@ -51,8 +51,7 @@ impl Configuration {
                         .skip(1)
                         .collect();
                     return Some(Alias::ShellAlias(shell_command));
-                }
-                else {
+                } else {
                     let alias_arguments: Vec<String> = alias_value
                         .split(" ")
                         .into_iter()
@@ -68,16 +67,20 @@ impl Configuration {
     }
 }
 
-pub fn read_configuration(executable_dir: PathBuf) -> Configuration {
+pub fn get_config_path(executable_dir: PathBuf) -> PathBuf {
     let config_file_name = "config.toml";
 
-    let config_file_path = executable_dir
+    return executable_dir
         .as_path()
         .join(config_file_name);
+}
 
-    let p = config_file_path.as_path();
-    if !p.exists() {
-        let mut f = File::create(p).expect(&format!("Unable to create {} file", config_file_name));
+pub fn create_config_if_needed(config_file_path: &PathBuf) {
+    if !config_file_path.exists() {
+        let mut f = File::create(config_file_path)
+            .expect(&format!(
+                "Unable to create {} file",
+                config_file_path.to_str().unwrap()));
         let sample_config_content = [
             "executable=\"/bin/bash\"",
             "",
@@ -89,7 +92,9 @@ pub fn read_configuration(executable_dir: PathBuf) -> Configuration {
             f.write_all("\n".as_bytes()).expect("Unable to write data");
         }
     }
+}
 
+pub fn read_configuration(config_file_path: &PathBuf) -> Configuration {
     let contents = fs::read_to_string(config_file_path)
         .expect("Something went wrong reading the config file");
 
@@ -97,6 +102,6 @@ pub fn read_configuration(executable_dir: PathBuf) -> Configuration {
         .parse::<Value>()
         .expect("Error while parsing config file");
 
-    return Configuration {config: config};
+    return Configuration { config };
 }
 
