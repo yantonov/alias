@@ -15,55 +15,54 @@ pub enum Alias {
 }
 
 impl Configuration {
-    fn get_key(&self, key: &str) -> &Value {
-        return self
-            .config
-            .get(key)
-            .expect(&format!("key '{}' was not found at configuration file", key));
-    }
-
-    fn value_as_str<'a>(&self, key: &str, value: &'a Value) -> &'a str {
-        return value
-            .as_str()
-            .expect(&format!("'{}' key has no string type", key));
-    }
-
-    pub fn get_executable(&self) -> String {
-        let key = "executable";
-        return self
-            .value_as_str(
-                key,
-                self.get_key(key))
-            .to_string();
-    }
-
-    pub fn get_alias(&self, command: &str) -> Option<Alias> {
-        let alias = self
-            .get_key("alias")
-            .get(command);
-
-        match alias {
-            Some(a) => {
-                let alias_value = self.value_as_str(command, a);
-                if alias_value.starts_with("!") {
-                    let shell_command: String = alias_value
-                        .chars()
-                        .skip(1)
-                        .collect();
-                    return Some(Alias::ShellAlias(shell_command));
-                } else {
-                    let alias_arguments: Vec<String> = alias_value
-                        .split(" ")
-                        .into_iter()
-                        .map(|t| t.to_string())
-                        .collect();
-                    return Some(Alias::RegularAlias(alias_arguments));
-                }
-            }
-            None => {
-                return None;
-            }
+    fn get_key(&self, key: &str) -> Result<&Value, String> {
+        match self.config.get(key) {
+            None => Err(format!("key '{}' was not found at configuration file", key)),
+            Some(v) => Ok(v),
         }
+    }
+
+    fn value_as_str<'a>(&self, key: &str, value: &'a Value) -> Result<String, String> {
+        match value.as_str() {
+            None => Err(format!("'{}' key has no string type", key)),
+            Some(v) => Ok(v.to_string()),
+        }
+    }
+
+    pub fn get_executable(&self) -> Result<String, String> {
+        let key = "executable";
+        let value = self.get_key(key)?;
+        let as_str = self.value_as_str(key, value)?;
+        Ok(as_str)
+    }
+
+    pub fn get_alias(&self, command: &str) -> Result<Option<Alias>, String> {
+        let alias = self.get_key("alias")?;
+
+        Ok(
+            match alias.get(command) {
+                Some(a) => {
+                    let alias_value = self.value_as_str(command, a)?;
+
+                    if alias_value.starts_with("!") {
+                        let shell_command: String = alias_value
+                            .chars()
+                            .skip(1)
+                            .collect();
+                        Some(Alias::ShellAlias(shell_command))
+                    } else {
+                        let alias_arguments: Vec<String> = alias_value
+                            .split(" ")
+                            .into_iter()
+                            .map(|t| t.to_string())
+                            .collect();
+                        Some(Alias::RegularAlias(alias_arguments))
+                    }
+                }
+                None => {
+                    None
+                }
+            })
     }
 }
 
@@ -75,12 +74,17 @@ pub fn get_config_path(executable_dir: PathBuf) -> PathBuf {
         .join(config_file_name);
 }
 
-pub fn create_config_if_needed(config_file_path: &PathBuf) {
+pub fn create_config_if_needed(config_file_path: &PathBuf) -> Result<(), String> {
     if !config_file_path.exists() {
+        let config_file_path_str =
+            match config_file_path.to_str() {
+                None => Err("cannot convert path to string"),
+                Some(v) => Ok(v),
+            }?;
+
         let mut f = File::create(config_file_path)
-            .expect(&format!(
-                "Unable to create {} file",
-                config_file_path.to_str().unwrap()));
+            .map_err(|_| format!("Unable to create {} file", config_file_path_str))?;
+
         let sample_config_content = [
             "executable=\"/bin/bash\"",
             "",
@@ -88,20 +92,21 @@ pub fn create_config_if_needed(config_file_path: &PathBuf) {
             "test_alias1=\"--help\""
         ];
         for line in &sample_config_content {
-            f.write_all(line.as_bytes()).expect("Unable to write data");
-            f.write_all("\n".as_bytes()).expect("Unable to write data");
+            f.write_all(line.as_bytes()).map_err(|_| "Unable to write data")?;
+            f.write_all("\n".as_bytes()).map_err(|_| "Unable to write data")?;
         }
     }
+    Ok(())
 }
 
-pub fn read_configuration(config_file_path: &PathBuf) -> Configuration {
+pub fn read_configuration(config_file_path: &PathBuf) -> Result<Configuration, String> {
     let contents = fs::read_to_string(config_file_path)
-        .expect("Something went wrong reading the config file");
+        .map_err(|_| "Something went wrong reading the config file")?;
 
     let config = contents
         .parse::<Value>()
-        .expect("Error while parsing config file");
+        .map_err(|_| "Error while parsing config file")?;
 
-    return Configuration { config };
+    return Ok(Configuration { config });
 }
 

@@ -7,21 +7,24 @@ mod environment;
 mod process;
 
 pub fn get_call_context(environment: &environment::Environment,
-                        configuration: &config::Configuration) -> CallContext {
+                        configuration: &config::Configuration) -> Result<CallContext, String> {
     let call_arguments = environment.get_call_arguments();
+    let executable = configuration.get_executable()?;
+
     if call_arguments.len() == 0 {
-        return CallContext {
-            executable: expand_env_var(&configuration.get_executable()),
-            args: Vec::new(),
-        };
+        return Ok(
+            CallContext {
+                executable: expand_env_var(&executable),
+                args: Vec::new(),
+            });
     }
-    let aliased_command = configuration.get_alias(&call_arguments[0]);
+    let aliased_command = configuration.get_alias(&call_arguments[0])?;
 
     match aliased_command {
         Some(alias) => {
             match alias {
                 ShellAlias(shell_command) => {
-                    let shell = environment.get_shell();
+                    let shell = environment.get_shell()?;
                     let mut args = Vec::new();
                     args.push("-c");
                     args.push(&shell_command);
@@ -29,10 +32,11 @@ pub fn get_call_context(environment: &environment::Environment,
                     for p in &call_arguments[1..call_arguments.len()] {
                         args.push(&p);
                     }
-                    return CallContext {
-                        executable: shell,
-                        args: args.iter().map(|t| t.to_string()).collect(),
-                    };
+                    Ok(
+                        CallContext {
+                            executable: shell,
+                            args: args.iter().map(|t| t.to_string()).collect(),
+                        })
                 }
                 RegularAlias(alias_arguments) => {
                     let mut args = Vec::new();
@@ -42,10 +46,11 @@ pub fn get_call_context(environment: &environment::Environment,
                     for p in &call_arguments[1..call_arguments.len()] {
                         args.push(p.to_string());
                     }
-                    return CallContext {
-                        executable: expand_env_var(&configuration.get_executable()),
-                        args: args,
-                    };
+                    Ok(
+                        CallContext {
+                            executable: expand_env_var(&executable),
+                            args,
+                        })
                 }
             }
         }
@@ -54,10 +59,11 @@ pub fn get_call_context(environment: &environment::Environment,
             for p in call_arguments {
                 args.push(p.to_string());
             }
-            return CallContext {
-                executable: expand_env_var(&configuration.get_executable()),
-                args: args,
-            };
+            Ok(
+                CallContext {
+                    executable: expand_env_var(&executable),
+                    args,
+                })
         }
     }
 }
@@ -65,10 +71,20 @@ pub fn get_call_context(environment: &environment::Environment,
 fn main() {
     let environment = environment::get_environment();
 
-    let config_file_path = &config::get_config_path(environment.executable_dir());
-    config::create_config_if_needed(config_file_path);
-    let configuration = config::read_configuration(config_file_path);
+    let executable_dir = environment.executable_dir()
+        .unwrap();
 
-    let call_context = get_call_context(&environment, &configuration);
-    process::execute(&call_context);
+    let config_file_path = &config::get_config_path(executable_dir);
+
+    config::create_config_if_needed(config_file_path)
+        .unwrap();
+
+    let configuration = config::read_configuration(config_file_path)
+        .unwrap();
+
+    let call_context = get_call_context(&environment, &configuration)
+        .unwrap();
+
+    process::execute(&call_context)
+        .unwrap();
 }

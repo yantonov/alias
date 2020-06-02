@@ -1,33 +1,36 @@
 use std::env;
 use std::path::PathBuf;
-use regex::{Regex, Captures};
+
+use regex::{Captures, Regex};
 
 pub struct Environment {
     args: Vec<String>
 }
 
 impl Environment {
-    pub fn executable_dir(&self) -> PathBuf {
+    pub fn executable_dir(&self) -> Result<PathBuf, String> {
         let executable = env::current_exe()
-            .unwrap();
-        return executable
+            .map_err(|_| "cannot get current executable")?;
+        match executable
             .parent()
-            .unwrap()
-            .to_path_buf();
+            .map(|x| x.to_path_buf()) {
+            None => Err("cannot get parent directory".to_string()),
+            Some(v) => Ok(v),
+        }
     }
 
     pub fn get_call_arguments(&self) -> &[String] {
         return &self.args[1..self.args.len()];
     }
 
-    pub fn get_shell(&self) -> String {
+    pub fn get_shell(&self) -> Result<String, &str> {
         return env::var("SHELL")
-            .expect("SHELL environment variable is not defined");
+            .map_err(|_| "SHELL environment variable is not defined");
     }
 }
 
 pub fn get_environment() -> Environment {
-    return Environment {args: env::args().collect()};
+    return Environment { args: env::args().collect() };
 }
 
 pub fn expand_env_var(path: &str) -> String {
@@ -40,7 +43,7 @@ pub fn expand_env_var(path: &str) -> String {
                 .unwrap()
                 .as_str()
                 .to_string();
-            return env::var(&env_var[2..(env_var.len()-1)])
+            return env::var(&env_var[2..(env_var.len() - 1)])
                 .unwrap_or(env_var);
         });
     return expanded.into_owned();
@@ -50,6 +53,7 @@ pub fn expand_env_var(path: &str) -> String {
 #[cfg(test)]
 mod tests {
     use std::env;
+
     use super::*;
 
     #[test]

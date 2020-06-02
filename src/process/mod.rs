@@ -1,29 +1,34 @@
-use std::process::{Command, Stdio};
-use std::io::{self, Write};
 use std::ffi::OsStr;
+use std::io::{self, Write};
+use std::process::{Command, Stdio};
 
 pub struct CallContext {
     pub executable: String,
-    pub args: Vec<String>
+    pub args: Vec<String>,
 }
 
-fn exec<I, S>(executable: &str, args: I)
-where I: IntoIterator<Item = S>,
-      S: AsRef<OsStr>
+fn exec<I, S>(executable: &str, args: I) -> Result<(), String>
+    where I: IntoIterator<Item=S>,
+          S: AsRef<OsStr>
 {
     let output = Command::new(executable)
         .args(args)
         .stdout(Stdio::inherit())
         .output()
-        .expect("failed to execute process");
+        .map_err(|_| "failed to execute process")?;
 
-    io::stdout().write_all(&output.stdout).unwrap();
-    io::stderr().write_all(&output.stderr).unwrap();
+    io::stdout()
+        .write_all(&output.stdout)
+        .map_err(|_| "cannot redirect stdout")?;
+
+    io::stderr()
+        .write_all(&output.stderr)
+        .map_err(|_| "cannot redirect stderr")?;
 
     let status = output.status;
-    std::process::exit(status.code().unwrap());
+    std::process::exit(status.code().unwrap())
 }
 
-pub fn execute(context: &CallContext) {
-    exec(&context.executable, &context.args);
+pub fn execute(context: &CallContext) -> Result<(), String> {
+    exec(&context.executable, &context.args)
 }
