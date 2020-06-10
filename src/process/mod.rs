@@ -13,6 +13,7 @@ fn exec<I, S>(executable: &str, args: I) -> Result<(), String>
 {
     let output = Command::new(executable)
         .args(args)
+        .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .output()
         .map_err(|_| "failed to execute process")?;
