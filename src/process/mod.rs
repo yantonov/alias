@@ -1,6 +1,5 @@
 use std::ffi::OsStr;
-use std::io::{self, Write};
-use std::process::{Command, Stdio};
+use std::process::{Command};
 
 pub struct CallContext {
     pub executable: String,
@@ -11,23 +10,14 @@ fn exec<I, S>(executable: &str, args: I) -> Result<(), String>
     where I: IntoIterator<Item=S>,
           S: AsRef<OsStr>
 {
-    let output = Command::new(executable)
+    let mut output = Command::new(executable)
         .args(args)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .output()
+        .spawn()
         .map_err(|_| "failed to execute process")?;
 
-    io::stdout()
-        .write_all(&output.stdout)
-        .map_err(|_| "cannot redirect stdout")?;
-
-    io::stderr()
-        .write_all(&output.stderr)
-        .map_err(|_| "cannot redirect stderr")?;
-
-    let status = output.status;
-    std::process::exit(status.code().unwrap())
+    output.wait()
+        .map(|_| ())
+        .map_err(|_| "failed to wait child process".to_owned())
 }
 
 pub fn execute(context: &CallContext) -> Result<(), String> {
