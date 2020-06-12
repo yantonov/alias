@@ -17,7 +17,9 @@ fn exec<I, S>(executable: &str, args: I) -> Result<(), String>
 
     output.wait()
         .map(|_| ())
-        .map_err(|_| "failed to wait child process".to_owned())
+        .map_err(|_| "failed to wait child process")?;
+
+    Ok(())
 }
 
 pub fn execute(context: &CallContext) -> Result<(), String> {
