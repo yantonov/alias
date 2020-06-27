@@ -4,7 +4,9 @@ cd "$(dirname "$0")"
 
 cd ..
 
-TARGET="$(pwd)/target/release/alias"
+EXECUTABLE_NAME="alias"
+
+TARGET="$(pwd)/target/release/${EXECUTABLE_NAME}"
 
 cargo build --release
 
