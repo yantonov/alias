@@ -66,7 +66,7 @@ impl Configuration {
     }
 }
 
-pub fn get_config_path(executable_dir: PathBuf) -> PathBuf {
+pub fn get_config_path(executable_dir: &PathBuf) -> PathBuf {
     let config_file_name = "config.toml";
 
     return executable_dir

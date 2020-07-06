@@ -4,10 +4,28 @@ use std::path::PathBuf;
 use regex::{Captures, Regex};
 
 pub struct Environment {
-    args: Vec<String>
+    executable_dir: PathBuf,
+    args: Vec<String>,
+    shell: String,
 }
 
 impl Environment {
+    pub fn executable_dir(&self) -> &PathBuf {
+        &self.executable_dir
+    }
+
+    pub fn call_arguments(&self) -> &[String] {
+        &self.args[1..self.args.len()]
+    }
+
+    pub fn shell(&self) -> String {
+        self.shell.to_string()
+    }
+}
+
+struct SystemEnvironment {}
+
+impl SystemEnvironment {
     pub fn executable_dir(&self) -> Result<PathBuf, String> {
         let executable = env::current_exe()
             .map_err(|_| "cannot get current executable")?;
@@ -19,18 +37,23 @@ impl Environment {
         }
     }
 
-    pub fn get_call_arguments(&self) -> &[String] {
-        return &self.args[1..self.args.len()];
+    pub fn call_arguments(&self) -> Vec<String> {
+        return env::args().collect();
     }
 
-    pub fn get_shell(&self) -> Result<String, &str> {
+    pub fn shell(&self) -> Result<String, &str> {
         return env::var("SHELL")
             .map_err(|_| "SHELL environment variable is not defined");
     }
 }
 
-pub fn get_environment() -> Environment {
-    return Environment { args: env::args().collect() };
+pub fn system_environment() -> Environment {
+    let sys_env = SystemEnvironment {};
+    return Environment {
+        executable_dir: sys_env.executable_dir().unwrap(),
+        args: sys_env.call_arguments(),
+        shell: sys_env.shell().unwrap(),
+    };
 }
 
 pub fn expand_env_var(path: &str) -> String {

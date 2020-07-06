@@ -8,7 +8,7 @@ mod process;
 
 pub fn get_call_context(environment: &environment::Environment,
                         configuration: &config::Configuration) -> Result<CallContext, String> {
-    let call_arguments = environment.get_call_arguments();
+    let call_arguments = environment.call_arguments();
     let executable = configuration.get_executable()?;
 
     if call_arguments.len() == 0 {
@@ -24,7 +24,7 @@ pub fn get_call_context(environment: &environment::Environment,
         Some(alias) => {
             match alias {
                 ShellAlias(shell_command) => {
-                    let shell = environment.get_shell()?;
+                    let shell = environment.shell();
                     let mut args = Vec::new();
                     args.push("-c");
                     args.push(&shell_command);
@@ -69,10 +69,9 @@ pub fn get_call_context(environment: &environment::Environment,
 }
 
 fn main() {
-    let environment = environment::get_environment();
+    let environment = environment::system_environment();
 
-    let executable_dir = environment.executable_dir()
-        .unwrap();
+    let executable_dir = environment.executable_dir();
 
     let config_file_path = &config::get_config_path(executable_dir);
 
