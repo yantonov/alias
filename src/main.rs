@@ -1,3 +1,5 @@
+use std::process::exit;
+
 use config::Alias::{RegularAlias, ShellAlias};
 use environment::expand_env_var;
 use process::CallContext;
@@ -84,6 +86,14 @@ fn main() {
     let call_context = get_call_context(&environment, &configuration)
         .unwrap();
 
-    process::execute(&call_context)
-        .unwrap();
+    let result = process::execute(&call_context);
+    let unknown_exit_code = -1;
+    match result {
+        Ok(exit_code) => {
+            exit(exit_code.unwrap_or(unknown_exit_code));
+        }
+        Err(_) => {
+            exit(unknown_exit_code);
+        }
+    }
 }
