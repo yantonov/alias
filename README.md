@@ -26,7 +26,7 @@ So you don't need to pollute global namespace with shell aliases (.zsh/.bashrc/.
 ### About different operating systems
 Different operating systems places binary files to different directories.  
 To handle this, it is possible to reference target executable using environment variables (example: executable="${HOME}/tools/bin/app")  
-This helps you to use the same config file across the different operating systems.
+This helps you to use the same config file across different operating systems.
 
 ### Examples
 Sample config can be found [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml).
