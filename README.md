@@ -22,6 +22,7 @@ This app is independent from
 (sample config will be created if it does not exist)
 3. Use custom aliases just like if they are supported out of the box.  
 So you don't need to pollute global namespace with shell aliases (.zsh/.bashrc/.profile etc).
+4. List of aliases can be get using --aliases parameter.
 
 ### About different operating systems
 Different operating systems places binary files to different directories.  
