@@ -64,6 +64,19 @@ impl Configuration {
                 }
             })
     }
+
+    pub fn list_aliases(&self) -> Vec<(String, String)> {
+        match self.config.get("alias").and_then(|x| x.as_table()) {
+            Some(table) => {
+                let mut aliases: Vec<(String, String)> = table.iter()
+                    .map(|(key, value)| (key.clone(), format!("{}", value)))
+                    .collect();
+                aliases.sort_by(|a, b| a.1.cmp(&b.1));
+                return aliases;
+            }
+            _ => vec![]
+        }
+    }
 }
 
 pub fn get_config_path(executable_dir: &PathBuf) -> PathBuf {

@@ -84,3 +84,9 @@ impl Handler for DefaultHandler {
         execute(environment, configuration)
     }
 }
+
+impl DefaultHandler {
+    pub fn new() -> DefaultHandler {
+        return DefaultHandler {};
+    }
+}
