@@ -1,8 +1,9 @@
 use crate::{config, environment};
 
-mod default;
+pub mod default;
 
-pub fn default_handler(environment: &environment::Environment,
-                       configuration: &config::Configuration) {
-    default::execute(environment, configuration)
+pub trait Handler {
+    fn handle(&self,
+              environment: &environment::Environment,
+              configuration: &config::Configuration);
 }

@@ -1,6 +1,8 @@
 use crate::{config, environment, process};
 use crate::config::Alias::{RegularAlias, ShellAlias};
-use crate::environment::expand_env_var;
+use crate::config::Configuration;
+use crate::environment::{Environment, expand_env_var};
+use crate::handler::Handler;
 use crate::process::CallContext;
 
 fn get_call_context(environment: &environment::Environment,
@@ -65,10 +67,20 @@ fn get_call_context(environment: &environment::Environment,
     }
 }
 
-pub fn execute(environment: &environment::Environment,
-               configuration: &config::Configuration) {
+fn execute(environment: &environment::Environment,
+           configuration: &config::Configuration) {
     let call_context = get_call_context(&environment, &configuration)
         .unwrap();
     let result = process::execute(&call_context);
     process::exit(result);
+}
+
+pub struct DefaultHandler {}
+
+impl Handler for DefaultHandler {
+    fn handle(&self,
+              environment: &Environment,
+              configuration: &Configuration) {
+        execute(environment, configuration)
+    }
 }

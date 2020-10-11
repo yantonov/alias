@@ -1,7 +1,15 @@
+use crate::handler::default::DefaultHandler;
+use crate::handler::Handler;
+
 mod config;
 mod environment;
 mod handler;
 mod process;
+
+fn get_handler(_environment: &environment::Environment,
+               _configuration: &config::Configuration) -> impl Handler {
+    return DefaultHandler {};
+}
 
 fn main() {
     let environment = environment::system_environment();
@@ -13,5 +21,6 @@ fn main() {
     let configuration = config::read_configuration(config_file_path)
         .unwrap();
 
-    handler::default_handler(&environment, &configuration);
+    get_handler(&environment, &configuration)
+        .handle(&environment, &configuration);
 }
