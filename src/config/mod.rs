@@ -71,7 +71,7 @@ impl Configuration {
                 let mut aliases: Vec<(String, String)> = table.iter()
                     .map(|(key, value)| (key.clone(), format!("{}", value)))
                     .collect();
-                aliases.sort_by(|a, b| a.1.cmp(&b.1));
+                aliases.sort_by(|a,b| a.0.cmp(&b.0));
                 return aliases;
             }
             _ => vec![]
