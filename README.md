@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/yantonov/alias.svg?branch=master)](https://travis-ci.com/yantonov/alias)
+[![Build Actions Status](https://github.com/yantonov/alias/workflows/ci/badge.svg)](https://github.com/yantonov/alias/actions)
 
 ### Intro
 

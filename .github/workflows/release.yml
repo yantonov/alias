@@ -1,0 +1,56 @@
+name: release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  publish:
+    # define multiple targets
+    name: Publish for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            executable: alias
+            asset_name: alias-linux
+          - os: macos-latest
+            executable: alias
+            asset_name: alias-macos
+
+    # build
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: enable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: build
+        run: cargo build --release
+
+      - name: Set enviroment for github-release
+        run: |
+          echo "RELEASE_TAG=$( echo ${GITHUB_REF##*/} )" >> $GITHUB_ENV
+
+      - name: create archive
+        uses: master-atul/tar-action@v1.0.2
+        with:
+          command: c
+          cwd: ./target/release/
+          files: |
+            ${{ matrix.executable }}
+          outPath: target/release/${{ matrix.asset_name }}-${{ env.RELEASE_TAG }}.tar.gz
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: |
+            target/release/${{ matrix.asset_name }}-${{ env.RELEASE_TAG }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
