@@ -34,4 +34,5 @@ Sample config can be found [here](https://github.com/yantonov/alias/blob/master/
 
 A little bit more realistic examples:  
 1. [arc aliases](https://github.com/yantonov/arc-aliases)  
-1. [docker aliases](https://github.com/yantonov/docker-aliases)  
+2. [docker aliases](https://github.com/yantonov/docker-aliases)  
+3. [gw aliases](https://github.com/yantonov/gw-aliases)  
