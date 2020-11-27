@@ -30,9 +30,16 @@ fn main() {
     let config_file_path = &config::get_config_path(executable_dir);
     config::create_config_if_needed(config_file_path)
         .unwrap();
-    let configuration = config::read_configuration(config_file_path)
-        .unwrap();
+    let configuration = config::read_configuration(config_file_path);
 
-    get_handler(&environment, &configuration)
-        .handle(&environment, &configuration);
+    match configuration {
+        Ok(config) => {
+            get_handler(&environment, &config)
+                .handle(&environment, &config);
+        }
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    }
 }
