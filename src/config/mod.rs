@@ -71,7 +71,7 @@ impl Configuration {
                 let mut aliases: Vec<(String, String)> = table.iter()
                     .map(|(key, value)| (key.clone(), format!("{}", value)))
                     .collect();
-                aliases.sort_by(|a,b| a.0.cmp(&b.0));
+                aliases.sort_by(|a, b| a.0.cmp(&b.0));
                 return aliases;
             }
             _ => vec![]
@@ -118,7 +118,8 @@ pub fn read_configuration(config_file_path: &PathBuf) -> Result<Configuration, S
 
     let config = contents
         .parse::<Value>()
-        .map_err(|_| "Error while parsing config file")?;
+        .map_err(|e|
+            format!("[ERROR] Cannot parse config file: {}", e))?;
 
     return Ok(Configuration { config });
 }
