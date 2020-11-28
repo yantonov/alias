@@ -4,6 +4,8 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use toml::Value;
+use std::collections::BTreeMap;
+use toml::value::Value::Table;
 
 pub struct Configuration {
     config: Value
@@ -122,5 +124,9 @@ pub fn read_configuration(config_file_path: &PathBuf) -> Result<Configuration, S
             format!("[ERROR] Cannot parse config file: {}", e))?;
 
     return Ok(Configuration { config });
+}
+
+pub fn empty_configuration() -> Configuration {
+    Configuration { config: Table(BTreeMap::new()) }
 }
 

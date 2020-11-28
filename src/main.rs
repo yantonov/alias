@@ -1,6 +1,8 @@
 use handler::alias_list::AliasListHandler;
 use handler::default::DefaultHandler;
+use handler::error::ErrorHandler;
 use handler::Handler;
+use crate::config::empty_configuration;
 
 mod config;
 mod environment;
@@ -38,8 +40,8 @@ fn main() {
                 .handle(&environment, &config);
         }
         Err(e) => {
-            eprintln!("{}", e);
-            std::process::exit(1);
+            ErrorHandler::new(e)
+                .handle(&environment, &empty_configuration());
         }
     }
 }
