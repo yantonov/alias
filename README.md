@@ -24,7 +24,7 @@ This app is independent from
 So you don't need to pollute global namespace with shell aliases (.zsh/.bashrc/.profile etc).
 4. List of aliases can be get using --aliases parameter.
 5. You can add additional configuration file 'override.toml' to the same directory.
-This helps you to redefine or introduce new aliases which are depends on envrironment.
+This helps you to redefine or introduce new aliases which are depends on the environment.
 
 ### About different operating systems
 Different operating systems places binary files to different directories.  
