@@ -97,44 +97,45 @@ pub fn get_config_override_path(executable_dir: &PathBuf) -> PathBuf {
         .join(config_file_name);
 }
 
-pub fn merge(config: &Configuration, override_config: &Configuration) -> Configuration {
-    match &config.config {
-        Table(_) => {
-            match &override_config.config {
-                Table(_) => {
-                    Configuration {
-                        config: merge_tables(&config.config,
-                                             &override_config.config)
+pub fn merge(config: &Configuration,
+             override_config: &Configuration) -> Configuration {
+    Configuration {
+        config: merge_values(&config.config,
+                             &override_config.config)
+    }
+}
+
+fn merge_values(v1: &Value,
+                v2: &Value) -> Value {
+    match v1 {
+        Table(source_table) => {
+            match v2 {
+                Table(other_table) => {
+                    let mut result = source_table.clone();
+                    for (key, value) in other_table
+                        .iter() {
+                        let new_value = match result.get(key) {
+                            None => {
+                                value.clone()
+                            }
+                            Some(old) => {
+                                merge_values(&old.clone(),
+                                             &value.clone())
+                            }
+                        };
+                        result.insert(key.clone(), new_value);
                     }
+                    return Table(result);
                 }
                 _ => {
-                    Configuration { config: config.config.clone() }
+                    v1.clone()
                 }
             }
         }
         _ => {
-            Configuration { config: config.config.clone() }
+            v1.clone()
         }
     }
-}
-
-fn merge_tables(table1: &Value,
-                table2: &Value) -> Value {
-    let mut result = BTreeMap::new();
-    let chain = table1
-        .as_table()
-        .unwrap()
-        .iter()
-        .chain(
-            table2
-                .as_table()
-                .unwrap()
-                .iter()
-        );
-    for (key, value) in chain {
-        result.insert(key.clone(), value.clone());
-    }
-    return Table(result);
 }
 
 fn create_config_if_needed(config_file_path: &PathBuf) -> Result<(), String> {
@@ -205,4 +206,44 @@ pub fn get_configuration(executable_dir: &PathBuf) -> Result<Configuration, Stri
     return Ok(merge(
         &configuration.unwrap(),
         &override_configuration.unwrap()));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn get_table(section_name: &str, alias_name: &str, alias_value: &str) -> Value {
+        let mut table: BTreeMap<String, Value> = BTreeMap::new();
+        let mut section: BTreeMap<String, Value> = BTreeMap::new();
+        section.insert(alias_name.to_string(), Value::String(alias_value.to_string()));
+        table.insert(section_name.to_string(), Table(section));
+        return Table(table);
+    }
+
+    #[test]
+    fn merge_aliases() {
+        let origin = get_table("section", "first", "value1");
+        let override_config = get_table("section", "second", "value2");
+        let result = merge_values(&origin, &override_config);
+        let maybe_section = result.get("section");
+        match maybe_section {
+            None => {
+                assert!(false, "'section' not found")
+            }
+            _ => {}
+        }
+        let section = maybe_section.unwrap();
+        assert!(section.is_table());
+        assert_eq!("value1", section.get("first").unwrap().as_str().unwrap());
+        assert_eq!("value2", section.get("second").unwrap().as_str().unwrap());
+    }
+
+    #[test]
+    fn add_new_section() {
+        let origin = get_table("section1", "first", "value1");
+        let override_config = get_table("section2", "second", "value2");
+        let result = merge_values(&origin, &override_config);
+        assert!(result.get("section1").is_some());
+        assert!(result.get("section2").is_some());
+    }
 }
