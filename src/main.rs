@@ -29,10 +29,7 @@ fn main() {
     let environment = environment::system_environment();
     let executable_dir = environment.executable_dir();
 
-    let config_file_path = &config::get_config_path(executable_dir);
-    config::create_config_if_needed(config_file_path)
-        .unwrap();
-    let configuration = config::read_configuration(config_file_path);
+    let configuration = config::get_configuration(executable_dir);
 
     match configuration {
         Ok(config) => {

@@ -89,7 +89,55 @@ pub fn get_config_path(executable_dir: &PathBuf) -> PathBuf {
         .join(config_file_name);
 }
 
-pub fn create_config_if_needed(config_file_path: &PathBuf) -> Result<(), String> {
+pub fn get_config_override_path(executable_dir: &PathBuf) -> PathBuf {
+    let config_file_name = "override.toml";
+
+    return executable_dir
+        .as_path()
+        .join(config_file_name);
+}
+
+pub fn merge(config: &Configuration, override_config: &Configuration) -> Configuration {
+    match &config.config {
+        Table(_) => {
+            match &override_config.config {
+                Table(_) => {
+                    Configuration {
+                        config: merge_tables(&config.config,
+                                             &override_config.config)
+                    }
+                }
+                _ => {
+                    Configuration { config: config.config.clone() }
+                }
+            }
+        }
+        _ => {
+            Configuration { config: config.config.clone() }
+        }
+    }
+}
+
+fn merge_tables(table1: &Value,
+                table2: &Value) -> Value {
+    let mut result = BTreeMap::new();
+    let chain = table1
+        .as_table()
+        .unwrap()
+        .iter()
+        .chain(
+            table2
+                .as_table()
+                .unwrap()
+                .iter()
+        );
+    for (key, value) in chain {
+        result.insert(key.clone(), value.clone());
+    }
+    return Table(result);
+}
+
+fn create_config_if_needed(config_file_path: &PathBuf) -> Result<(), String> {
     if !config_file_path.exists() {
         let config_file_path_str =
             match config_file_path.to_str() {
@@ -133,3 +181,28 @@ pub fn empty_configuration() -> Configuration {
     Configuration { config: Table(BTreeMap::new()) }
 }
 
+pub fn get_configuration(executable_dir: &PathBuf) -> Result<Configuration, String> {
+    let config_file_path = get_config_path(executable_dir);
+    create_config_if_needed(&config_file_path)
+        .unwrap();
+    let configuration = read_configuration(&config_file_path);
+    if configuration.is_err() {
+        return configuration;
+    };
+
+    let config_override_file_path = get_config_override_path(executable_dir);
+    let override_configuration =
+        if config_override_file_path.exists() {
+            read_configuration(
+                &config_override_file_path)
+        } else {
+            Ok(empty_configuration())
+        };
+    if override_configuration.is_err() {
+        return override_configuration;
+    }
+
+    return Ok(merge(
+        &configuration.unwrap(),
+        &override_configuration.unwrap()));
+}
