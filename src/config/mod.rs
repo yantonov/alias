@@ -116,12 +116,15 @@ pub fn create_config_if_needed(config_file_path: &PathBuf) -> Result<(), String>
 
 pub fn read_configuration(config_file_path: &PathBuf) -> Result<Configuration, String> {
     let contents = fs::read_to_string(config_file_path)
-        .map_err(|_| "Something went wrong reading the config file")?;
+        .map_err(|_| format!("Something went wrong while reading the config file: {}",
+                             config_file_path.to_str().unwrap()))?;
 
     let config = contents
         .parse::<Value>()
         .map_err(|e|
-            format!("[ERROR] Cannot parse config file: {}", e))?;
+            format!("[ERROR] Cannot parse config file: {}. {}",
+                    config_file_path.to_str().unwrap(),
+                    e))?;
 
     return Ok(Configuration { config });
 }
