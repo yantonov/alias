@@ -132,6 +132,16 @@ fn merge_values(v1: &Value,
                 }
             }
         }
+        Value::String(_s1) => {
+            match v2 {
+                Value::String(_s2) => {
+                    v2.clone()
+                }
+                _ => {
+                    v1.clone()
+                }
+            }
+        }
         _ => {
             v1.clone()
         }
@@ -245,5 +255,16 @@ mod tests {
         let result = merge_values(&origin, &override_config);
         assert!(result.get("section1").is_some());
         assert!(result.get("section2").is_some());
+    }
+
+    #[test]
+    fn redefine_alias() {
+        let origin = get_table("section", "key", "value1");
+        let override_config = get_table("section", "key", "value2");
+        let result = merge_values(&origin, &override_config);
+        let maybe_section = result.get("section");
+        assert!(maybe_section.is_some());
+        let section = maybe_section.unwrap();
+        assert_eq!("value2", section.get("key").unwrap().as_str().unwrap());
     }
 }
