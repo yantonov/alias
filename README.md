@@ -26,6 +26,12 @@ So you don't need to pollute global namespace with shell aliases (.zsh/.bashrc/.
 5. You can add additional configuration file 'override.toml' to the same directory.
 This helps you to redefine or introduce new aliases which are depends on the environment.
 
+### About target executable location
+There are two options:  
+1. You can explicitly define target executable using 'executable' parameter (see sample [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml)).  
+2. Without explicit configuration, app tries to detect target executable automatically by trying to find exiting file with the same name later in the PATH.  
+In that case you have to add this alias application in front of the target executable in terms of PATH variable.
+
 ### About different operating systems
 Different operating systems places binary files to different directories.  
 To handle this, it is possible to reference target executable using environment variables (example: executable="${HOME}/tools/bin/app")  

@@ -31,11 +31,17 @@ impl Configuration {
         }
     }
 
-    pub fn get_executable(&self) -> Result<String, String> {
+    pub fn get_executable(&self) -> Result<Option<String>, String> {
         let key = "executable";
-        let value = self.get_key(key)?;
-        let as_str = self.value_as_str(key, value)?;
-        Ok(as_str)
+        match self.get_key(key) {
+            Ok(value) => {
+                let as_str = self.value_as_str(key, value)?;
+                Ok(Some(as_str))
+            }
+            Err(_) => {
+                Ok(None)
+            }
+        }
     }
 
     pub fn get_alias(&self, command: &str) -> Result<Option<Alias>, String> {

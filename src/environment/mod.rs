@@ -1,15 +1,21 @@
 use std::env;
-use std::path::PathBuf;
+use std::path::{PathBuf};
 
-use regex::{Captures, Regex};
+pub mod expand_env;
+pub mod autodetect_executable;
 
 pub struct Environment {
+    executable_name: String,
     executable_dir: PathBuf,
     args: Vec<String>,
     shell: String,
 }
 
 impl Environment {
+    pub fn executable_name(&self) -> &String {
+        &self.executable_name
+    }
+
     pub fn executable_dir(&self) -> &PathBuf {
         &self.executable_dir
     }
@@ -26,6 +32,17 @@ impl Environment {
 struct SystemEnvironment {}
 
 impl SystemEnvironment {
+    pub fn executable_name(&self) -> Result<String, String> {
+        env::current_exe()
+            .map(|x| x
+                .file_name()
+                .expect("cannot detect filename")
+                .to_str()
+                .expect("cannot convert filename to string")
+                .to_string())
+            .map_err(|_| "cannot get current executable".to_string())
+    }
+
     pub fn executable_dir(&self) -> Result<PathBuf, String> {
         let executable = env::current_exe()
             .map_err(|_| "cannot get current executable")?;
@@ -50,45 +67,10 @@ impl SystemEnvironment {
 pub fn system_environment() -> Environment {
     let sys_env = SystemEnvironment {};
     return Environment {
+        executable_name: sys_env.executable_name().unwrap(),
         executable_dir: sys_env.executable_dir().unwrap(),
         args: sys_env.call_arguments(),
         shell: sys_env.shell().unwrap(),
     };
 }
 
-pub fn expand_env_var(path: &str) -> String {
-    let re = Regex::new(r"(\$\{[^{}]+\})").unwrap();
-    let expanded = re.replace_all(
-        path,
-        |captures: &Captures| -> String {
-            let env_var = captures
-                .get(1)
-                .unwrap()
-                .as_str()
-                .to_string();
-            return env::var(&env_var[2..(env_var.len() - 1)])
-                .unwrap_or(env_var);
-        });
-    return expanded.into_owned();
-}
-
-
-#[cfg(test)]
-mod tests {
-    use std::env;
-
-    use super::*;
-
-    #[test]
-    fn expand_existing_var() {
-        env::set_var("ENV_VAR", "yes");
-        assert_eq!("yes/replaced",
-                   expand_env_var("${ENV_VAR}/replaced"));
-    }
-
-    #[test]
-    fn not_existing_var_wait_unmodified_string() {
-        assert_eq!("${NOT_EXISTING_VAR}/not_replaced",
-                   expand_env_var("${NOT_EXISTING_VAR}/not_replaced"));
-    }
-}
