@@ -4,12 +4,17 @@ use std::path::PathBuf;
 use regex::{Captures, Regex};
 
 pub struct Environment {
+    executable_name: String,
     executable_dir: PathBuf,
     args: Vec<String>,
     shell: String,
 }
 
 impl Environment {
+    pub fn executable_name(&self) -> &String {
+        &self.executable_name
+    }
+
     pub fn executable_dir(&self) -> &PathBuf {
         &self.executable_dir
     }
@@ -26,6 +31,17 @@ impl Environment {
 struct SystemEnvironment {}
 
 impl SystemEnvironment {
+    pub fn executable_name(&self) -> Result<String, String> {
+        env::current_exe()
+            .map(|x| x
+                .file_name()
+                .expect("cannot detect filename")
+                .to_str()
+                .expect("cannot convert filename to string")
+                .to_string())
+            .map_err(|_| "cannot get current executable".to_string())
+    }
+
     pub fn executable_dir(&self) -> Result<PathBuf, String> {
         let executable = env::current_exe()
             .map_err(|_| "cannot get current executable")?;
@@ -50,6 +66,7 @@ impl SystemEnvironment {
 pub fn system_environment() -> Environment {
     let sys_env = SystemEnvironment {};
     return Environment {
+        executable_name: sys_env.executable_name().unwrap(),
         executable_dir: sys_env.executable_dir().unwrap(),
         args: sys_env.call_arguments(),
         shell: sys_env.shell().unwrap(),
