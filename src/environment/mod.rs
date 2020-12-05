@@ -72,6 +72,10 @@ pub fn expand_env_var(path: &str) -> String {
     return expanded.into_owned();
 }
 
+pub fn autodetect_executable() -> Option<String> {
+    panic!("not implemented")
+}
+
 
 #[cfg(test)]
 mod tests {
