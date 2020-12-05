@@ -22,9 +22,14 @@ This app is independent from
 (sample config will be created if it does not exist)
 3. Use custom aliases just like if they are supported out of the box.  
 So you don't need to pollute global namespace with shell aliases (.zsh/.bashrc/.profile etc).
-4. List of aliases can be get using --aliases parameter.
-5. You can add additional configuration file 'override.toml' to the same directory.
+
+### About list of aliases
+List of aliases can be shown by using --aliases parameter.
+
+### About overriding configuration
+You can add additional configuration file 'override.toml' to the same directory.
 This helps you to redefine or introduce new aliases which are depends on the environment.
+Motivation: some aliases maybe speficic to the working environment and you do not want to expose it.
 
 ### About target executable location
 There are two options:  
