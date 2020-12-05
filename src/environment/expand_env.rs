@@ -22,7 +22,6 @@ mod tests {
     use std::env;
 
     use super::*;
-    use std::path::Path;
 
     #[test]
     fn expand_existing_var() {
