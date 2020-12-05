@@ -2,7 +2,6 @@ use std::env;
 use std::path::{PathBuf, Path};
 
 use regex::{Captures, Regex};
-use std::env::VarError;
 
 pub struct Environment {
     executable_name: String,
