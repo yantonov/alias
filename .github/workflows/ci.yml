@@ -18,3 +18,4 @@ jobs:
         with:
           toolchain: stable
       - run: cargo build --release
+      - run: cargo test
