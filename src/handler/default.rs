@@ -8,12 +8,14 @@ use crate::process::CallContext;
 fn get_call_context(environment: &environment::Environment,
                     configuration: &config::Configuration) -> Result<CallContext, String> {
     let call_arguments = environment.call_arguments();
-    let executable = configuration.get_executable()?;
+    let executable = configuration.get_executable()?
+        .map(|config| expand_env_var(&config))
+        .unwrap();
 
     if call_arguments.len() == 0 {
         return Ok(
             CallContext {
-                executable: expand_env_var(&executable),
+                executable,
                 args: Vec::new(),
             });
     }
@@ -47,7 +49,7 @@ fn get_call_context(environment: &environment::Environment,
                     }
                     Ok(
                         CallContext {
-                            executable: expand_env_var(&executable),
+                            executable,
                             args,
                         })
                 }
@@ -60,7 +62,7 @@ fn get_call_context(environment: &environment::Environment,
             }
             Ok(
                 CallContext {
-                    executable: expand_env_var(&executable),
+                    executable,
                     args,
                 })
         }
