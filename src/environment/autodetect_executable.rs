@@ -86,13 +86,28 @@ mod tests {
     #[test]
     fn target_executable_cannot_be_found_later_in_the_path() {
         let paths = [
-            Path::new("/home/username/app"),
+            Path::new("/home/username/some_app"),
+            Path::new("/home/username/alias_app"),
             Path::new("/bin"),
             Path::new("/usr/bin")];
         let path_os_string = env::join_paths(paths.iter()).unwrap();
         env::set_var("PATH", path_os_string);
         assert!(autodetect_executable(
+            Path::new("/home/username/alias_app"),
+            "alias",
+            &NoFile {})
+            .is_none());
+    }
+
+    #[test]
+    fn alias_path_does_not_exist_in_path_wait_autodetect_executable_fail() {
+        let paths = [
             Path::new("/bin"),
+            Path::new("/usr/bin")];
+        let path_os_string = env::join_paths(paths.iter()).unwrap();
+        env::set_var("PATH", path_os_string);
+        assert!(autodetect_executable(
+            Path::new("/home/username/app"),
             "alias",
             &NoFile {})
             .is_none());
