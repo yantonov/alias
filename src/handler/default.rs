@@ -14,7 +14,7 @@ fn get_call_context(environment: &environment::Environment,
             environment.executable_dir().as_path(),
             environment.executable_name().as_str(),
             &OsCheckFile {}))
-        .ok_or("Cannot autodetect executable")?;
+        .ok_or(format!("Cannot autodetect executable: {}", environment.executable_name()))?;
 
     if call_arguments.len() == 0 {
         return Ok(
@@ -75,10 +75,16 @@ fn get_call_context(environment: &environment::Environment,
 
 fn execute(environment: &environment::Environment,
            configuration: &config::Configuration) {
-    let call_context = get_call_context(&environment, &configuration)
-        .unwrap();
-    let result = process::execute(&call_context);
-    process::exit(result);
+    let call_context_result = get_call_context(&environment, &configuration);
+    match call_context_result {
+        Ok(call_context) => {
+            let result = process::execute(&call_context);
+            process::exit(result);
+        }
+        Err(error) => {
+            eprintln!("{}", error)
+        }
+    }
 }
 
 pub struct DefaultHandler {}
