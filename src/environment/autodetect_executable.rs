@@ -52,6 +52,14 @@ impl CheckFile for DummyCheckFile {
     }
 }
 
+struct NoFile {}
+
+impl CheckFile for NoFile {
+    fn exists(&self, _path: &PathBuf) -> bool {
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::env;
@@ -73,5 +81,20 @@ mod tests {
                 expected_path: Path::new("/usr/bin/alias").to_owned()
             }).unwrap();
         assert_eq!("/usr/bin/alias", autodetect);
+    }
+
+    #[test]
+    fn target_executable_cannot_be_found_later_in_the_path() {
+        let paths = [
+            Path::new("/home/username/app"),
+            Path::new("/bin"),
+            Path::new("/usr/bin")];
+        let path_os_string = env::join_paths(paths.iter()).unwrap();
+        env::set_var("PATH", path_os_string);
+        assert!(autodetect_executable(
+            Path::new("/bin"),
+            "alias",
+            &NoFile {})
+            .is_none());
     }
 }
