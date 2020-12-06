@@ -27,8 +27,8 @@ So you don't need to pollute global namespace with shell aliases (.zsh/.bashrc/.
 List of aliases can be shown by using --aliases parameter.
 
 ### About overriding configuration
-You can add additional configuration file 'override.toml' to the same directory.
-This helps you to redefine or introduce new aliases which are depends on the environment.
+You can add additional configuration file 'override.toml' to the same directory.  
+This helps you to redefine or introduce new aliases which are depends on the environment.  
 Motivation: some aliases maybe speficic to the working environment and you do not want to expose it.
 
 ### About target executable location
