@@ -7,6 +7,7 @@ This app helps you to define custom alias for a command line utility which has n
 ### Motivation
 Let's suppose that some command line utility has no alias support, like, for example, git.  
 Using this app you can define some aliases (including shell aliases) and use it just like they were defined out of the box.
+And, it is important, you do not want to pollute global namespace with shell aliases (using .zsh/.bashrc/.profile etc).
 
 ### Technical notes
 Technically is just a thin wrapper to conditionally run target program.  
@@ -21,7 +22,7 @@ This app is independent from
 2. Write config (config.toml) and put it near the executable 
 (sample config will be created if it does not exist)
 3. Use custom aliases just like if they are supported out of the box.  
-So you don't need to pollute global namespace with shell aliases (.zsh/.bashrc/.profile etc).
+
 
 ### About list of aliases
 List of aliases can be shown by using --aliases parameter.
