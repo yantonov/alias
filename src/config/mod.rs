@@ -4,8 +4,8 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use toml::Value;
-use std::collections::BTreeMap;
 use toml::value::Value::Table;
+use toml::value::Map;
 
 pub struct Configuration {
     config: Value
@@ -195,7 +195,7 @@ pub fn read_configuration(config_file_path: &PathBuf) -> Result<Configuration, S
 }
 
 pub fn empty_configuration() -> Configuration {
-    Configuration { config: Table(BTreeMap::new()) }
+    Configuration { config: Table(Map::new()) }
 }
 
 pub fn get_configuration(executable_dir: &PathBuf) -> Result<Configuration, String> {
@@ -227,10 +227,11 @@ pub fn get_configuration(executable_dir: &PathBuf) -> Result<Configuration, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    use toml::value::Map;
 
     fn get_table(section_name: &str, alias_name: &str, alias_value: &str) -> Value {
-        let mut table: BTreeMap<String, Value> = BTreeMap::new();
-        let mut section: BTreeMap<String, Value> = BTreeMap::new();
+        let mut table: Map<String, Value> = Map::new();
+        let mut section: Map<String, Value> = Map::new();
         section.insert(alias_name.to_string(), Value::String(alias_value.to_string()));
         table.insert(section_name.to_string(), Table(section));
         return Table(table);
