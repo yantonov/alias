@@ -17,5 +17,5 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - run: cargo build --release
+      - run: cargo build
       - run: cargo test
