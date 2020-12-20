@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 
 cd ..
 
-EXECUTABLE_NAME="alias"
+EXECUTABLE_NAME="$(basename $(pwd))"
 
 TARGET="$(pwd)/target/debug/${EXECUTABLE_NAME}"
 
