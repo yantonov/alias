@@ -79,10 +79,19 @@ fn execute(environment: &environment::Environment,
     match call_context_result {
         Ok(call_context) => {
             let result = process::execute(&call_context);
-            process::exit(result);
+            match result {
+                Ok(_) => {
+                    process::exit(result);
+                }
+                Err(error) => {
+                    eprintln!("{}", error);
+                    process::exit(Err(error));
+                }
+            }
         }
         Err(error) => {
-            eprintln!("{}", error)
+            eprintln!("{}", error);
+            process::exit(Err(error));
         }
     }
 }
