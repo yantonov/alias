@@ -13,11 +13,11 @@ fn exec<I, S>(executable: &str, args: I) -> Result<Option<i32>, String>
     let mut output = Command::new(executable)
         .args(args)
         .spawn()
-        .map_err(|_| "failed to execute process")?;
+        .map_err(|e| format!("Failed to execute process. {}", e))?;
 
     output.wait()
         .map(|r| r.code())
-        .map_err(|_| "failed to wait child process".to_string())
+        .map_err(|e| format!("Failed to wait child process. {}", e))
 }
 
 pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
