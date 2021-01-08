@@ -31,11 +31,31 @@ impl Configuration {
         }
     }
 
+    fn value_as_boolean<'a>(&self, key: &str, value: &'a Value) -> Result<bool, String> {
+        match value {
+            Value::Boolean(bool_value) => { Ok(bool_value.clone()) }
+            _ => Err(format!("'{}' key has no boolean type", key)),
+        }
+    }
+
     pub fn get_executable(&self) -> Result<Option<String>, String> {
         let key = "executable";
         match self.get_key(key) {
             Ok(value) => {
                 let as_str = self.value_as_str(key, value)?;
+                Ok(Some(as_str))
+            }
+            Err(_) => {
+                Ok(None)
+            }
+        }
+    }
+
+    pub fn get_run_as_shell(&self) -> Result<Option<bool>, String> {
+        let key = "run_as_shell";
+        match self.get_key(key) {
+            Ok(value) => {
+                let as_str = self.value_as_boolean(key, value)?;
                 Ok(Some(as_str))
             }
             Err(_) => {
@@ -138,18 +158,8 @@ fn merge_values(v1: &Value,
                 }
             }
         }
-        Value::String(_s1) => {
-            match v2 {
-                Value::String(_s2) => {
-                    v2.clone()
-                }
-                _ => {
-                    v1.clone()
-                }
-            }
-        }
         _ => {
-            v1.clone()
+            v2.clone()
         }
     }
 }

@@ -1,6 +1,6 @@
 use crate::{config, environment, process};
 use crate::config::Alias::{RegularAlias, ShellAlias};
-use crate::config::Configuration;
+use crate::config::{Configuration, Alias};
 use crate::environment::{Environment, expand_env, autodetect_executable::{OsCheckFile, autodetect_executable}};
 use crate::handler::Handler;
 use crate::process::CallContext;
@@ -15,27 +15,24 @@ fn get_call_context(environment: &environment::Environment,
             environment.executable_name().as_str(),
             &OsCheckFile {}))
         .ok_or(format!("Cannot autodetect executable: {}", environment.executable_name()))?;
+    let shell = environment.shell();
 
-    if call_arguments.len() == 0 {
-        return Ok(
-            CallContext {
-                executable,
-                args: Vec::new(),
-            });
-    }
-    let aliased_command = configuration.get_alias(&call_arguments[0])?;
+    let aliased_command: Option<Alias> = if call_arguments.len() == 0 {
+        None
+    } else {
+        configuration.get_alias(&call_arguments[0])?
+    };
 
     match aliased_command {
         Some(alias) => {
             match alias {
                 ShellAlias(shell_command) => {
-                    let shell = environment.shell();
                     let mut args = Vec::new();
-                    args.push("-c");
-                    args.push(&shell_command);
-                    args.push("script");
+                    args.push("-c".to_string());
+                    args.push(shell_command.clone());
+                    args.push("script".to_string());
                     for p in &call_arguments[1..call_arguments.len()] {
-                        args.push(&p);
+                        args.push(p.clone());
                     }
                     Ok(
                         CallContext {
@@ -45,6 +42,10 @@ fn get_call_context(environment: &environment::Environment,
                 }
                 RegularAlias(alias_arguments) => {
                     let mut args = Vec::new();
+                    let run_as_shell = run_as_shell(&configuration)?;
+                    if run_as_shell {
+                        args.push(executable.clone());
+                    }
                     for a in alias_arguments {
                         args.push(a);
                     }
@@ -53,7 +54,7 @@ fn get_call_context(environment: &environment::Environment,
                     }
                     Ok(
                         CallContext {
-                            executable,
+                            executable: if run_as_shell { shell } else { executable },
                             args,
                         })
                 }
@@ -61,14 +62,27 @@ fn get_call_context(environment: &environment::Environment,
         }
         None => {
             let mut args = Vec::new();
+            let run_as_shell = run_as_shell(&configuration)?;
+            if run_as_shell {
+                args.push(executable.clone());
+            }
             for p in call_arguments {
                 args.push(p.to_string());
             }
             Ok(
                 CallContext {
-                    executable,
+                    executable: if run_as_shell { shell } else { executable },
                     args,
                 })
+        }
+    }
+}
+
+fn run_as_shell(configuration: &Configuration) -> Result<bool, String> {
+    match configuration.get_run_as_shell()? {
+        None => Ok(false),
+        Some(as_shell) => {
+            Ok(as_shell)
         }
     }
 }
