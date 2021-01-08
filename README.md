@@ -34,8 +34,8 @@ Motivation: some aliases may be specific to the working environment and you do n
 ### About target executable location
 There are two options:  
 1. You can explicitly define target executable using 'executable' parameter (see sample [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml)).  
-2. Without explicit configuration, app tries to detect target executable automatically by trying to find exiting file with the same name later in the PATH.  
-In that case you have to add this alias application in front of the target executable in terms of PATH variable.
+2. Without explicit configuration, the app tries to detect target executable automatically by trying to find an existing file with the same name later in the PATH.  
+In that case, you have to add this alias application in front of the target executable in terms of PATH variable.
 
 ### About different operating systems
 Different operating systems places binary files to different directories.  
