@@ -23,7 +23,6 @@ This app is independent from
 (sample config will be created if it does not exist)
 3. Use custom aliases just like if they are supported out of the box.  
 
-
 ### About list of aliases
 List of aliases can be shown by using --aliases parameter.
 
@@ -42,6 +41,10 @@ In that case you have to add this alias application in front of the target execu
 Different operating systems places binary files to different directories.  
 To handle this, it is possible to reference target executable using environment variables (example: executable="${HOME}/tools/bin/app")  
 This helps you to use the same config file across different operating systems.
+
+### About using shell scripts on Windows
+When you try to use shell script directly as a target executable you can face a problem '%1 is not a valid win32 application'.  
+To deal with this issue you can ann run_as_shell=true parameter to the config (or to the override file if you prefer), this will allows you to run script using current shell.
 
 ### Examples
 Sample config can be found [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml).
