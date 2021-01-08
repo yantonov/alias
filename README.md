@@ -29,7 +29,7 @@ List of aliases can be shown by using --aliases parameter.
 ### About overriding configuration
 You can add additional configuration file 'override.toml' to the same directory.  
 This helps you to redefine or introduce new aliases which are depend on the environment.  
-Motivation: some aliases maybe speficic to the working environment and you do not want to expose it.
+Motivation: some aliases may be specific to the working environment and you do not want to expose them by sharing using a public repository.
 
 ### About target executable location
 There are two options:  
