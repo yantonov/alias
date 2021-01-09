@@ -16,6 +16,9 @@ jobs:
           - os: ubuntu-latest
             executable: alias
             asset_name: alias-linux
+          - os: windows-latest
+            executable: alias.exe
+            asset_name: alias-windows
           - os: macos-latest
             executable: alias
             asset_name: alias-macos
