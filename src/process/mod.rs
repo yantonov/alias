@@ -1,4 +1,3 @@
-use std::ffi::OsStr;
 use std::process::Command;
 
 pub struct CallContext {
@@ -6,18 +5,34 @@ pub struct CallContext {
     pub args: Vec<String>,
 }
 
-fn exec<I, S>(executable: &str, args: I) -> Result<Option<i32>, String>
-    where I: IntoIterator<Item=S>,
-          S: AsRef<OsStr>
+fn get_command(executable: &str,
+               args: &Vec<String>) -> String
 {
+    let mut tokens: Vec<String> = vec![];
+    tokens.push(executable.to_string());
+    for arg in args {
+        tokens.push(arg.clone());
+    }
+    tokens.join(" ")
+}
+
+fn exec(executable: &str,
+        args: &Vec<String>) -> Result<Option<i32>, String>
+{
+    let pretty_printed_command = get_command(executable, args);
+
     let mut output = Command::new(executable)
         .args(args)
         .spawn()
-        .map_err(|e| format!("Failed to execute process. {}", e))?;
+        .map_err(|e| format!("Failed to execute process [{}]. {}",
+                             pretty_printed_command,
+                             e))?;
 
     output.wait()
         .map(|r| r.code())
-        .map_err(|e| format!("Failed to wait child process. {}", e))
+        .map_err(|e| format!("Failed to wait child process [{}]. {}",
+                             pretty_printed_command,
+                             e))
 }
 
 pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
