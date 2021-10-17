@@ -112,4 +112,19 @@ mod tests {
             &NoFile {})
             .is_none());
     }
+
+    #[test]
+    fn alias_path_exists_but_target_executable_doesnt_expect_autodetect_fail() {
+        let paths = [
+            Path::new("/home/username/app"),
+            Path::new("/bin"),
+            Path::new("/usr/bin")];
+        let path_os_string = env::join_paths(paths.iter()).unwrap();
+        env::set_var("PATH", path_os_string);
+        assert!(autodetect_executable(
+            Path::new("/home/username/app"),
+            "alias",
+            &NoFile {})
+            .is_none());
+    }
 }
