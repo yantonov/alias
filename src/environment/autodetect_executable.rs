@@ -43,7 +43,7 @@ impl CheckFile for OsCheckFile {
 }
 
 struct DummyCheckFile {
-    expected_path: PathBuf
+    expected_path: PathBuf,
 }
 
 impl CheckFile for DummyCheckFile {
@@ -69,11 +69,9 @@ mod tests {
 
     #[test]
     fn target_executable_can_be_found_later_in_the_path() {
-        let paths = [
-            Path::new("/bin"),
-            Path::new("/usr/bin")];
-        let path_os_string = env::join_paths(paths.iter()).unwrap();
-        env::set_var("PATH", path_os_string);
+        set_path(vec![
+            "/bin",
+            "/usr/bin"]);
         let autodetect = autodetect_executable(
             Path::new("/bin"),
             "alias",
@@ -85,13 +83,11 @@ mod tests {
 
     #[test]
     fn target_executable_cannot_be_found_later_in_the_path() {
-        let paths = [
-            Path::new("/home/username/some_app"),
-            Path::new("/home/username/alias_app"),
-            Path::new("/bin"),
-            Path::new("/usr/bin")];
-        let path_os_string = env::join_paths(paths.iter()).unwrap();
-        env::set_var("PATH", path_os_string);
+        set_path(vec![
+            "/home/username/some_app",
+            "/home/username/alias_app",
+            "/bin",
+            "/usr/bin"]);
         assert!(autodetect_executable(
             Path::new("/home/username/alias_app"),
             "alias",
@@ -101,11 +97,9 @@ mod tests {
 
     #[test]
     fn alias_path_does_not_exist_in_path_wait_autodetect_executable_fail() {
-        let paths = [
-            Path::new("/bin"),
-            Path::new("/usr/bin")];
-        let path_os_string = env::join_paths(paths.iter()).unwrap();
-        env::set_var("PATH", path_os_string);
+        set_path(vec![
+            "/bin",
+            "/usr/bin"]);
         assert!(autodetect_executable(
             Path::new("/home/username/app"),
             "alias",
@@ -115,16 +109,24 @@ mod tests {
 
     #[test]
     fn alias_path_exists_but_target_executable_doesnt_expect_autodetect_fail() {
-        let paths = [
-            Path::new("/home/username/app"),
-            Path::new("/bin"),
-            Path::new("/usr/bin")];
-        let path_os_string = env::join_paths(paths.iter()).unwrap();
-        env::set_var("PATH", path_os_string);
+        set_path(vec![
+            "/home/username/app",
+            "/bin",
+            "/usr/bin"]);
         assert!(autodetect_executable(
             Path::new("/home/username/app"),
             "alias",
             &NoFile {})
             .is_none());
+    }
+
+    fn set_path(path_strings: Vec<&str>) {
+        let paths: Vec<&Path> = path_strings
+            .into_iter()
+            .map(|p| Path::new(p))
+            .collect();
+        let path_os_string = env::join_paths(
+            paths.iter()).unwrap();
+        env::set_var("PATH", path_os_string);
     }
 }
