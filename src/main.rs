@@ -2,7 +2,7 @@ use handler::alias_list::AliasListHandler;
 use handler::default::DefaultHandler;
 use handler::error::ErrorHandler;
 use handler::Handler;
-use crate::config::empty_configuration;
+use config::empty_configuration;
 
 mod config;
 mod environment;
