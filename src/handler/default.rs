@@ -17,7 +17,7 @@ fn get_call_context(environment: &environment::Environment,
         .ok_or(format!("Cannot autodetect executable: {}", environment.executable_name()))?;
     let shell = environment.shell();
 
-    let aliased_command: Option<Alias> = if call_arguments.len() == 0 {
+    let aliased_command: Option<Alias> = if call_arguments.is_empty() {
         None
     } else {
         configuration.get_alias(&call_arguments[0])?
@@ -27,10 +27,10 @@ fn get_call_context(environment: &environment::Environment,
         Some(alias) => {
             match alias {
                 ShellAlias(shell_command) => {
-                    let mut args = Vec::new();
-                    args.push("-c".to_string());
-                    args.push(shell_command.clone());
-                    args.push("script".to_string());
+                    let mut args = vec![
+                        "-c".to_string(),
+                        shell_command,
+                        "script".to_string()];
                     for p in &call_arguments[1..call_arguments.len()] {
                         args.push(p.clone());
                     }
@@ -42,7 +42,7 @@ fn get_call_context(environment: &environment::Environment,
                 }
                 RegularAlias(alias_arguments) => {
                     let mut args = Vec::new();
-                    let run_as_shell = run_as_shell(&configuration)?;
+                    let run_as_shell = run_as_shell(configuration)?;
                     if run_as_shell {
                         args.push(executable.clone());
                     }
@@ -62,7 +62,7 @@ fn get_call_context(environment: &environment::Environment,
         }
         None => {
             let mut args = Vec::new();
-            let run_as_shell = run_as_shell(&configuration)?;
+            let run_as_shell = run_as_shell(configuration)?;
             if run_as_shell {
                 args.push(executable.clone());
             }
@@ -89,7 +89,7 @@ fn run_as_shell(configuration: &Configuration) -> Result<bool, String> {
 
 fn execute(environment: &environment::Environment,
            configuration: &config::Configuration) {
-    let call_context_result = get_call_context(&environment, &configuration);
+    let call_context_result = get_call_context(environment, configuration);
     match call_context_result {
         Ok(call_context) => {
             let result = process::execute(&call_context);
@@ -122,6 +122,6 @@ impl Handler for DefaultHandler {
 
 impl DefaultHandler {
     pub fn new() -> DefaultHandler {
-        return DefaultHandler {};
+        DefaultHandler {}
     }
 }

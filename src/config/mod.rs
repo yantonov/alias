@@ -1,7 +1,7 @@
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 use toml::Value;
 use toml::value::Value::Table;
@@ -33,7 +33,7 @@ impl Configuration {
 
     fn value_as_boolean<'a>(&self, key: &str, value: &'a Value) -> Result<bool, String> {
         match value {
-            Value::Boolean(bool_value) => { Ok(bool_value.clone()) }
+            Value::Boolean(bool_value) => { Ok(*bool_value) }
             _ => Err(format!("'{}' key has no boolean type", key)),
         }
     }
@@ -72,7 +72,7 @@ impl Configuration {
                 Some(a) => {
                     let alias_value = self.value_as_str(command, a)?;
 
-                    if alias_value.starts_with("!") {
+                    if alias_value.starts_with('!') {
                         let shell_command: String = alias_value
                             .chars()
                             .skip(1)
@@ -80,7 +80,7 @@ impl Configuration {
                         Some(Alias::ShellAlias(shell_command))
                     } else {
                         let alias_arguments: Vec<String> = alias_value
-                            .split(" ")
+                            .split(' ')
                             .into_iter()
                             .map(|t| t.to_string())
                             .collect();
@@ -100,27 +100,25 @@ impl Configuration {
                     .map(|(key, value)| (key.clone(), format!("{}", value)))
                     .collect();
                 aliases.sort_by(|a, b| a.0.cmp(&b.0));
-                return aliases;
+                aliases
             }
             _ => vec![]
         }
     }
 }
 
-pub fn get_config_path(executable_dir: &PathBuf) -> PathBuf {
+pub fn get_config_path(executable_dir: &Path) -> PathBuf {
     let config_file_name = "config.toml";
 
-    return executable_dir
-        .as_path()
-        .join(config_file_name);
+    executable_dir
+        .join(config_file_name)
 }
 
-pub fn get_config_override_path(executable_dir: &PathBuf) -> PathBuf {
+pub fn get_config_override_path(executable_dir: &Path) -> PathBuf {
     let config_file_name = "override.toml";
 
-    return executable_dir
-        .as_path()
-        .join(config_file_name);
+    executable_dir
+        .join(config_file_name)
 }
 
 pub fn merge(config: &Configuration,
@@ -151,7 +149,7 @@ fn merge_values(v1: &Value,
                         };
                         result.insert(key.clone(), new_value);
                     }
-                    return Table(result);
+                    Table(result)
                 }
                 _ => {
                     v1.clone()
@@ -164,7 +162,7 @@ fn merge_values(v1: &Value,
     }
 }
 
-fn create_config_if_needed(config_file_path: &PathBuf) -> Result<(), String> {
+fn create_config_if_needed(config_file_path: &Path) -> Result<(), String> {
     if !config_file_path.exists() {
         let config_file_path_str =
             match config_file_path.to_str() {
@@ -189,7 +187,7 @@ fn create_config_if_needed(config_file_path: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
-pub fn read_configuration(config_file_path: &PathBuf) -> Result<Configuration, String> {
+pub fn read_configuration(config_file_path: &Path) -> Result<Configuration, String> {
     let contents = fs::read_to_string(config_file_path)
         .map_err(|_| format!("Something went wrong while reading the config file: {}",
                              config_file_path.to_str().unwrap()))?;
@@ -201,14 +199,14 @@ pub fn read_configuration(config_file_path: &PathBuf) -> Result<Configuration, S
                     config_file_path.to_str().unwrap(),
                     e))?;
 
-    return Ok(Configuration { config });
+    Ok(Configuration { config })
 }
 
 pub fn empty_configuration() -> Configuration {
     Configuration { config: Table(Map::new()) }
 }
 
-pub fn get_configuration(executable_dir: &PathBuf) -> Result<Configuration, String> {
+pub fn get_configuration(executable_dir: &Path) -> Result<Configuration, String> {
     let config_file_path = get_config_path(executable_dir);
     create_config_if_needed(&config_file_path)
         .unwrap();
@@ -229,9 +227,9 @@ pub fn get_configuration(executable_dir: &PathBuf) -> Result<Configuration, Stri
         return override_configuration;
     }
 
-    return Ok(merge(
+    Ok(merge(
         &configuration.unwrap(),
-        &override_configuration.unwrap()));
+        &override_configuration.unwrap()))
 }
 
 #[cfg(test)]

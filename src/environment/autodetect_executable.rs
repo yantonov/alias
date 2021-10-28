@@ -31,13 +31,13 @@ pub fn autodetect_executable(executable_path: &Path,
 }
 
 pub trait CheckFile {
-    fn exists(&self, path: &PathBuf) -> bool;
+    fn exists(&self, path: &Path) -> bool;
 }
 
 pub struct OsCheckFile {}
 
 impl CheckFile for OsCheckFile {
-    fn exists(&self, path: &PathBuf) -> bool {
+    fn exists(&self, path: &Path) -> bool {
         path.exists()
     }
 }
@@ -47,15 +47,15 @@ struct DummyCheckFile {
 }
 
 impl CheckFile for DummyCheckFile {
-    fn exists(&self, path: &PathBuf) -> bool {
-        self.expected_path.as_path() == path.as_path()
+    fn exists(&self, path: &Path) -> bool {
+        self.expected_path == path
     }
 }
 
 struct NoFile {}
 
 impl CheckFile for NoFile {
-    fn exists(&self, _path: &PathBuf) -> bool {
+    fn exists(&self, _path: &Path) -> bool {
         false
     }
 }

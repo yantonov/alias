@@ -6,10 +6,11 @@ pub struct CallContext {
 }
 
 fn get_command(executable: &str,
-               args: &Vec<String>) -> String
+               args: &[String]) -> String
 {
-    let mut tokens: Vec<String> = vec![];
-    tokens.push(executable.to_string());
+    let mut tokens: Vec<String> = vec![
+        executable.to_string()
+    ];
     for arg in args {
         tokens.push(arg.clone());
     }
@@ -17,7 +18,7 @@ fn get_command(executable: &str,
 }
 
 fn exec(executable: &str,
-        args: &Vec<String>) -> Result<Option<i32>, String>
+        args: &[String]) -> Result<Option<i32>, String>
 {
     let pretty_printed_command = get_command(executable, args);
 

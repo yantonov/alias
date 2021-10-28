@@ -16,6 +16,6 @@ impl Handler for AliasListHandler {
 
 impl AliasListHandler {
     pub fn new() -> AliasListHandler {
-        return AliasListHandler {};
+        AliasListHandler {}
     }
 }

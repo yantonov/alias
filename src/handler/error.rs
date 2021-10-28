@@ -17,6 +17,6 @@ impl Handler for ErrorHandler {
 
 impl ErrorHandler {
     pub fn new(error_message: String) -> ErrorHandler {
-        return ErrorHandler { error_message };
+        ErrorHandler { error_message }
     }
 }

@@ -11,10 +11,10 @@ pub fn expand_env_var(path: &str) -> String {
                 .unwrap()
                 .as_str()
                 .to_string();
-            return env::var(&env_var[2..(env_var.len() - 1)])
-                .unwrap_or(env_var);
+            env::var(&env_var[2..(env_var.len() - 1)])
+                .unwrap_or(env_var)
         });
-    return expanded.into_owned();
+    expanded.into_owned()
 }
 
 #[cfg(test)]

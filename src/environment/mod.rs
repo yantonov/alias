@@ -55,12 +55,12 @@ impl SystemEnvironment {
     }
 
     pub fn call_arguments(&self) -> Vec<String> {
-        return env::args().collect();
+        env::args().collect()
     }
 
     pub fn shell(&self) -> Result<String, &str> {
-        return env::var("SHELL")
-            .map_err(|_| "SHELL environment variable is not defined");
+        env::var("SHELL")
+            .map_err(|_| "SHELL environment variable is not defined")
     }
 }
 
