@@ -9,8 +9,7 @@ mod environment;
 mod handler;
 mod process;
 
-fn get_handler(environment: &environment::Environment,
-               _configuration: &config::Configuration) -> Box<dyn Handler> {
+fn get_handler(environment: &environment::Environment) -> Box<dyn Handler> {
     let call_arguments = environment.call_arguments();
 
     let arg_count = call_arguments.len();
@@ -33,7 +32,7 @@ fn main() {
 
     match configuration {
         Ok(config) => {
-            get_handler(&environment, &config)
+            get_handler(&environment)
                 .handle(&environment, &config);
         }
         Err(e) => {
