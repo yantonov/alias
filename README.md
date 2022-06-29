@@ -18,7 +18,8 @@ This app is independent of
 3. shell/command interpreter
 
 ### Usage
-1. Put the executable to PATH, and name it the same as the target program (program without alias support)
+1. Put the executable to PATH, and name it the same as the target program (program without alias support)  
+You can get prebuilt binaries [here](https://github.com/yantonov/alias/releases)
 2. Write config (config.toml) and put it near the executable 
 (sample config will be created if it does not exist)
 3. Use custom aliases just like if they are supported out of the box.  
