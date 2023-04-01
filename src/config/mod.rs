@@ -2,10 +2,10 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::{PathBuf, Path};
+use toml::map::Map;
 
 use toml::Value;
 use toml::value::Value::Table;
-use toml::value::Map;
 
 pub struct Configuration {
     config: Value
@@ -235,7 +235,6 @@ pub fn get_configuration(executable_dir: &Path) -> Result<Configuration, String>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use toml::value::Map;
 
     fn get_table(section_name: &str, alias_name: &str, alias_value: &str) -> Value {
         let mut table: Map<String, Value> = Map::new();
