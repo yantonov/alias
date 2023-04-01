@@ -1,7 +1,7 @@
 use crate::{config, environment, process};
 use crate::config::Alias::{RegularAlias, ShellAlias};
 use crate::config::{Configuration, Alias};
-use crate::environment::{Environment, expand_env, autodetect_executable::{OsCheckFile, autodetect_executable}};
+use crate::environment::{Environment, expand_env, autodetect_executable::{OsFileSystemWrapper, autodetect_executable}};
 use crate::handler::Handler;
 use crate::process::CallContext;
 
@@ -13,7 +13,7 @@ fn get_call_context(environment: &environment::Environment,
         .or_else(|| autodetect_executable(
             environment.executable_dir().as_path(),
             environment.executable_name().as_str(),
-            &OsCheckFile {}))
+            &OsFileSystemWrapper {}))
         .ok_or(format!("Cannot autodetect executable: {}", environment.executable_name()))?;
     let shell = environment.shell();
 
