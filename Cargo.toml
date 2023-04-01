@@ -1,6 +1,6 @@
 [package]
 name = "alias"
-version = "0.2.1"
+version = "0.2.3"
 authors = ["Yury Antonov <yantonov@yandex.ru>"]
 edition = "2018"
 
