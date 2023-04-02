@@ -69,6 +69,12 @@ mod tests {
                 is_file: true
             };
         }
+
+        pub fn symlink() -> TestFileDescriptor {
+            return TestFileDescriptor {
+                is_file: false
+            };
+        }
     }
 
     struct TestFileSystemWrapper {
@@ -112,6 +118,20 @@ mod tests {
             "alias",
             &fs).unwrap();
         assert_eq!("/usr/bin/alias", autodetect);
+    }
+
+    #[test]
+    fn symlink_to_target_executable_can_be_found_later_in_the_path() {
+        let mut fs = TestFileSystemWrapper::create();
+        fs.add("/bin/alias", &TestFileDescriptor::file());
+        fs.add("/usr/bin/alias", &TestFileDescriptor::symlink());
+        set_path(vec![
+            "/bin",
+            "/usr/bin"]);
+        assert!(autodetect_executable(
+            Path::new("/bin"),
+            "alias",
+            &fs).is_none());
     }
 
     #[test]
