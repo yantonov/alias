@@ -20,7 +20,7 @@ This app is independent of
 ### Usage
 1. Put the executable to PATH, and name it the same as the target program (program without alias support)  
 You can get prebuilt binaries [here](https://github.com/yantonov/alias/releases)
-2. Write config (config.toml) and put it near the executable 
+2. Write config (config.toml) and put it near the executable  
 (sample config will be created if it does not exist)
 3. Use custom aliases just like if they are supported out of the box.  
 
@@ -34,7 +34,7 @@ Motivation: some aliases may be specific to the working environment and you do n
 
 ### About target executable location
 There are two options:  
-1. You can explicitly define the target executable using 'executable' parameter (see sample [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml)).  
+1. You can explicitly define the target executable using 'executable' parameter (see the example [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml)).  
 2. Without explicit configuration, the app tries to detect the target executable automatically by trying to find an existing file with the same name later in the PATH.  
 In that case, you have to add this alias application in front of the target executable in terms of the PATH variable.
 
