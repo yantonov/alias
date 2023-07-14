@@ -2,15 +2,12 @@
 
 ### Intro
 
-This app helps you to define a custom alias for a command-line utility that has no [alias support](https://git-scm.com/docs/git-config#Documentation/git-config.txt-alias).
-
-### Motivation
-Let's suppose that some command-line utility has no alias support, like, for example, git.  
-Using this app you can define some aliases (including shell aliases) and use them just like they were defined out of the box.
-And, it is important, you do not want to pollute global namespace with shell aliases (using .zsh/.bashrc/.profile etc).
+This app helps you to define a custom alias for a command-line utility that has no [alias support](https://git-scm.com/docs/git-config#Documentation/git-config.txt-alias).  
+Using this app you can define some aliases (including shell aliases) and use them just like they were defined out of the box.  
+Therefore, you do not need to pollute a global namespace with shell aliases (using .zsh/.bashrc/.profile etc).  
 
 ### Technical notes
-Technically is just a thin wrapper to conditionally run target program.  
+Technically is just a thin wrapper(proxy) to conditionally run target program.  
 
 This app is independent of
 1. the target program which needs aliases support
