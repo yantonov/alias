@@ -25,7 +25,7 @@ This app is independent of
 3. shell/command interpreter
 
 ## Usage
-1. Put the executable to PATH, and name it the same as the target program (program without alias support)  
+1. Put the executable under PATH, and name it the same as the target program (program without alias support)  
 You can get prebuilt binaries [here](https://github.com/yantonov/alias/releases)
 2. Write config (config.toml) and put it near the executable  
 (a sample config will be created at the first launch if it does not exist)
@@ -58,6 +58,9 @@ To deal with this issue you can ann run_as_shell=true parameter to the config (o
 Sample config can be found [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml).
 
 A little bit more realistic examples:  
-1. [arc aliases](https://github.com/yantonov/arc-aliases)  
-2. [docker aliases](https://github.com/yantonov/docker-aliases)  
+1. [docker aliases](https://github.com/yantonov/docker-aliases)  
+2. [podman aliases](https://github.com/yantonov/podman-aliases)  
 3. [gw aliases](https://github.com/yantonov/gw-aliases)  
+4. [cdt aliases](https://github.com/yantonov/cdt-aliases)  
+5. [arc aliases](https://github.com/yantonov/arc-aliases)  
+6. [ya tool aliases](https://github.com/yantonov/ya-aliases)  
