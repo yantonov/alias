@@ -58,8 +58,8 @@ impl FileSystemWrapper for OsFileSystemWrapper {
 
     fn is_file(&self, path: &Path) -> bool {
         let metadata = std::fs::symlink_metadata(path);
-        return metadata.map(|x| x.is_file())
-            .unwrap_or(false);
+        metadata.map(|x| x.is_file())
+            .unwrap_or(false)
     }
 }
 
@@ -78,15 +78,15 @@ mod tests {
 
     impl TestFileDescriptor {
         pub fn file() -> TestFileDescriptor {
-            return TestFileDescriptor {
+            TestFileDescriptor {
                 is_file: true
-            };
+            }
         }
 
         pub fn symlink() -> TestFileDescriptor {
-            return TestFileDescriptor {
+            TestFileDescriptor {
                 is_file: false
-            };
+            }
         }
     }
 
@@ -96,9 +96,9 @@ mod tests {
 
     impl TestFileSystemWrapper {
         pub fn create() -> TestFileSystemWrapper {
-            return TestFileSystemWrapper {
+            TestFileSystemWrapper {
                 path_to_descriptor: HashMap::new()
-            };
+            }
         }
 
         pub fn add(&mut self, path: &str, descriptor: &TestFileDescriptor) {
@@ -112,9 +112,9 @@ mod tests {
         }
 
         fn is_file(&self, path: &Path) -> bool {
-            return self.path_to_descriptor.get(path.to_str().unwrap())
+            self.path_to_descriptor.get(path.to_str().unwrap())
                 .map(|d| d.is_file)
-                .unwrap_or(false);
+                .unwrap_or(false)
         }
     }
 
