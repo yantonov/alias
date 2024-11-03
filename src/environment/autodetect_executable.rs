@@ -7,14 +7,27 @@ pub fn autodetect_executable(executable_path: &Path,
     let executable_name_as_path = Path::new(executable_name);
     match env::var("PATH") {
         Ok(path_var) => {
-            let paths = env::split_paths(&path_var);
             let mut found_current = false;
-            for path_item in paths {
+            for path_item in env::split_paths(&path_var) {
                 if !found_current {
                     if path_item.as_path() == executable_path {
+                        // here we found the current directory and alias wrapper,
+                        // therefore not the target executable
                         found_current = true
                     }
                 } else {
+                    let target_path = Path::join(
+                        &path_item,
+                        &executable_name_as_path);
+                    if fs.exists(&target_path) {
+                        if fs.is_file(&target_path) {
+                            return Some(target_path.to_str().unwrap().to_string());
+                        }
+                    }
+                }
+            }
+            if !found_current {
+                for path_item in env::split_paths(&path_var) {
                     let target_path = Path::join(
                         &path_item,
                         &executable_name_as_path);
@@ -177,6 +190,21 @@ mod tests {
             "alias",
             &fs)
             .is_none());
+    }
+
+    #[test]
+    fn wrapper_doesnt_exist_in_path_try_to_find_first_executable_that_has_the_same_name() {
+        let mut fs = TestFileSystemWrapper::create();
+        fs.add("/usr/bin/alias", &TestFileDescriptor::file());
+        set_path(vec![
+            "/bin",
+            "/usr/bin"]);
+        let autodetect = autodetect_executable(
+            Path::new("/home/username/app"),
+            "alias",
+            &fs)
+            .unwrap();
+        assert_eq!("/usr/bin/alias", autodetect);
     }
 
     fn set_path(path_strings: Vec<&str>) {
