@@ -5,8 +5,8 @@ use crate::handler::Handler;
 use crate::process::CallContext;
 use crate::{config, environment, process};
 
-fn get_call_context(environment: &environment::Environment,
-                    configuration: &config::Configuration) -> Result<CallContext, String> {
+fn get_call_context(environment: &Environment,
+                    configuration: &Configuration) -> Result<CallContext, String> {
     let call_arguments = environment.call_arguments();
     let executable = get_executable(environment, configuration)?
         .ok_or(format!("Cannot autodetect executable: {}", environment.executable_name()))?;

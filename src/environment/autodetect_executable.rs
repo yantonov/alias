@@ -58,7 +58,7 @@ impl FileSystemWrapper for OsFileSystemWrapper {
 
     fn is_file(&self, path: &Path) -> bool {
         let metadata = std::fs::symlink_metadata(path);
-        metadata.map(|x| x.is_file())
+        metadata.map(|x| !x.is_dir())
             .unwrap_or(false)
     }
 }
