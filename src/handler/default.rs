@@ -1,9 +1,9 @@
-use crate::{config, environment, process};
 use crate::config::Alias::{RegularAlias, ShellAlias};
-use crate::config::{Configuration, Alias};
-use crate::environment::{Environment, expand_env, autodetect_executable::{OsFileSystemWrapper, autodetect_executable}};
+use crate::config::{Alias, Configuration};
+use crate::environment::{expand_env, Environment};
 use crate::handler::Handler;
 use crate::process::CallContext;
+use crate::{config, environment, process};
 
 fn get_call_context(environment: &environment::Environment,
                     configuration: &config::Configuration) -> Result<CallContext, String> {
@@ -38,10 +38,7 @@ fn get_call_context(environment: &environment::Environment,
 fn get_executable(environment: &Environment, configuration: &Configuration) -> Result<Option<String>, String> {
     Ok(configuration.get_executable()?
         .map(|config| expand_env::expand_env_var(&config))
-        .or_else(|| autodetect_executable(
-            environment.executable_dir().as_path(),
-            environment.executable_name().as_str(),
-            &OsFileSystemWrapper {})))
+        .or_else(|| environment.try_detect_executable()))
 }
 
 fn forward_call_to_target_application(configuration: &Configuration, call_arguments: &[String], executable: String, shell: String) -> Result<CallContext, String> {

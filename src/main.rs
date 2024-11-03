@@ -26,9 +26,8 @@ fn get_handler(environment: &environment::Environment) -> Box<dyn Handler> {
 
 fn main() {
     let environment = environment::system_environment();
-    let executable_dir = environment.executable_dir();
 
-    let configuration = config::get_configuration(executable_dir);
+    let configuration = config::get_configuration(&environment);
 
     match configuration {
         Ok(config) => {

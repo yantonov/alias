@@ -1,5 +1,6 @@
 use std::env;
 use std::path::{PathBuf};
+use crate::environment::autodetect_executable::{autodetect_executable, OsFileSystemWrapper};
 
 pub mod expand_env;
 pub mod autodetect_executable;
@@ -26,6 +27,13 @@ impl Environment {
 
     pub fn shell(&self) -> String {
         self.shell.to_string()
+    }
+
+    pub fn try_detect_executable(&self) -> Option<String> {
+        autodetect_executable(
+            self.executable_dir().as_path(),
+            self.executable_name.as_str(),
+            &OsFileSystemWrapper {})
     }
 }
 
@@ -66,11 +74,11 @@ impl SystemEnvironment {
 
 pub fn system_environment() -> Environment {
     let sys_env = SystemEnvironment {};
-    return Environment {
+    Environment {
         executable_name: sys_env.executable_name().unwrap(),
         executable_dir: sys_env.executable_dir().unwrap(),
         args: sys_env.call_arguments(),
         shell: sys_env.shell().unwrap(),
-    };
+    }
 }
 

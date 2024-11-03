@@ -1,14 +1,15 @@
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use toml::map::Map;
 
-use toml::Value;
+use crate::environment::Environment;
 use toml::value::Value::Table;
+use toml::Value;
 
 pub struct Configuration {
-    config: Value
+    config: Value,
 }
 
 pub enum Alias {
@@ -162,7 +163,7 @@ fn merge_values(v1: &Value,
     }
 }
 
-fn create_config_if_needed(config_file_path: &Path) -> Result<(), String> {
+fn create_config_if_needed(config_file_path: &Path, environment: &Environment) -> Result<(), String> {
     if !config_file_path.exists() {
         let config_file_path_str =
             match config_file_path.to_str() {
@@ -173,8 +174,11 @@ fn create_config_if_needed(config_file_path: &Path) -> Result<(), String> {
         let mut f = File::create(config_file_path)
             .map_err(|_| format!("Unable to create {} file", config_file_path_str))?;
 
+        let auto_detect_executable = environment.try_detect_executable();
+
         let sample_config_content = [
-            "executable=\"/bin/bash\"",
+            &auto_detect_executable.map(|x| format!("executable=\"{}\"", x))
+                .unwrap_or("#executable=\"not-found\"".to_string()),
             "",
             "[alias]",
             "test_alias1=\"--help\""
@@ -206,9 +210,10 @@ pub fn empty_configuration() -> Configuration {
     Configuration { config: Table(Map::new()) }
 }
 
-pub fn get_configuration(executable_dir: &Path) -> Result<Configuration, String> {
+pub fn get_configuration(environment: &Environment) -> Result<Configuration, String> {
+    let executable_dir = environment.executable_dir();
     let config_file_path = get_config_path(executable_dir);
-    create_config_if_needed(&config_file_path)
+    create_config_if_needed(&config_file_path, &environment)
         .unwrap();
     let configuration = read_configuration(&config_file_path);
     if configuration.is_err() {
