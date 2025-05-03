@@ -11,7 +11,9 @@ toml = "0.8.19"
 regex = "1.11.1"
 
 [profile.release]
-opt-level = 'z'  # Optimize for size.
-lto = true
-codegen-units = 1
-panic = 'abort'
+# https://github.com/johnthagen/min-sized-rust
+strip = true  # Automatically strip symbols from the binary.
+opt-level = "z"  # Optimize for size.
+lto = true # remove dead code and often times reduces binary size
+codegen-units = 1 # to allow for maximum size reduction optimizations
+panic = "abort" #  removes the need for this extra unwinding code
