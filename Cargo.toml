@@ -2,13 +2,13 @@
 name = "alias"
 version = "0.2.4"
 authors = ["Yury Antonov <1390348+yantonov@users.noreply.github.com>"]
-edition = "2018"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-toml = "0.8.19"
-regex = "1.11.1"
+toml = "0.8.23"
+regex = "1.12.2"
 
 [profile.release]
 # https://github.com/johnthagen/min-sized-rust

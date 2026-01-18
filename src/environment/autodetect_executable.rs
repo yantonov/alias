@@ -214,6 +214,8 @@ mod tests {
             .collect();
         let path_os_string = env::join_paths(
             paths.iter()).unwrap();
-        env::set_var("PATH", path_os_string);
+        unsafe {
+            env::set_var("PATH", path_os_string);
+        }
     }
 }

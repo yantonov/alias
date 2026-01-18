@@ -25,7 +25,9 @@ mod tests {
 
     #[test]
     fn expand_existing_var() {
-        env::set_var("ENV_VAR", "yes");
+        unsafe {
+                env::set_var("ENV_VAR", "yes");
+        }
         assert_eq!("yes/replaced",
                    expand_env_var("${ENV_VAR}/replaced"));
     }
