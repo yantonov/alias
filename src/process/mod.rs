@@ -5,35 +5,26 @@ pub struct CallContext {
     pub args: Vec<String>,
 }
 
-fn get_command(executable: &str,
-               args: &[String]) -> String
-{
-    let mut tokens: Vec<String> = vec![
-        executable.to_string()
-    ];
-    for arg in args {
-        tokens.push(arg.clone());
-    }
-    tokens.join(" ")
+fn format_command(executable: &str, args: &[String]) -> String {
+    std::iter::once(executable)
+        .chain(args.iter().map(String::as_str))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn exec(executable: &str,
         args: &[String]) -> Result<Option<i32>, String>
 {
-    let pretty_printed_command = get_command(executable, args);
-
     let mut output = Command::new(executable)
         .args(args)
         .spawn()
         .map_err(|e| format!("Failed to execute process [{}]. {}",
-                             pretty_printed_command,
-                             e))?;
+                             format_command(executable, args), e))?;
 
     output.wait()
         .map(|r| r.code())
         .map_err(|e| format!("Failed to wait child process [{}]. {}",
-                             pretty_printed_command,
-                             e))
+                             format_command(executable, args), e))
 }
 
 pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
