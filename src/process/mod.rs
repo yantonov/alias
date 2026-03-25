@@ -40,14 +40,6 @@ pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
     exec(&context.executable, &context.args)
 }
 
-pub fn exit(result: Result<Option<i32>, String>) {
-    let unknown_exit_code = -1;
-    match result {
-        Ok(exit_code) => {
-            std::process::exit(exit_code.unwrap_or(unknown_exit_code));
-        }
-        Err(_) => {
-            std::process::exit(unknown_exit_code);
-        }
-    }
+pub fn exit(code: Option<i32>) -> ! {
+    std::process::exit(code.unwrap_or(-1));
 }

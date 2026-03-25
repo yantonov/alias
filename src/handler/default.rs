@@ -103,20 +103,17 @@ fn execute(environment: &environment::Environment,
     let call_context_result = get_call_context(environment, configuration);
     match call_context_result {
         Ok(call_context) => {
-            let result = process::execute(&call_context);
-            match result {
-                Ok(_) => {
-                    process::exit(result);
-                }
+            match process::execute(&call_context) {
+                Ok(code) => process::exit(code),
                 Err(error) => {
                     eprintln!("{}", error);
-                    process::exit(Err(error));
+                    process::exit(None);
                 }
             }
         }
         Err(error) => {
             eprintln!("{}", error);
-            process::exit(Err(error));
+            process::exit(None);
         }
     }
 }
