@@ -3,45 +3,33 @@ use std::path::Path;
 
 pub fn autodetect_executable(executable_path: &Path,
                              executable_name: &str,
+                             path_var: &str,
                              fs: &dyn FileSystemWrapper) -> Option<String> {
     let executable_name_as_path = Path::new(executable_name);
-    match env::var("PATH") {
-        Ok(path_var) => {
-            let mut found_current = false;
-            for path_item in env::split_paths(&path_var) {
-                if !found_current {
-                    if path_item.as_path() == executable_path {
-                        // here we found the current directory and alias wrapper,
-                        // therefore not the target executable
-                        found_current = true
-                    }
-                } else {
-                    let target_path = Path::join(
-                        &path_item,
-                        &executable_name_as_path);
-                    if fs.exists(&target_path) {
-                        if fs.is_file(&target_path) {
-                            return Some(target_path.to_str().unwrap().to_string());
-                        }
-                    }
-                }
+    let mut found_current = false;
+    for path_item in env::split_paths(path_var) {
+        if !found_current {
+            if path_item.as_path() == executable_path {
+                // here we found the current directory and alias wrapper,
+                // therefore not the target executable
+                found_current = true;
             }
-            if !found_current {
-                for path_item in env::split_paths(&path_var) {
-                    let target_path = Path::join(
-                        &path_item,
-                        &executable_name_as_path);
-                    if fs.exists(&target_path) {
-                        if fs.is_file(&target_path) {
-                            return Some(target_path.to_str().unwrap().to_string());
-                        }
-                    }
-                }
+        } else {
+            let target_path = path_item.join(&executable_name_as_path);
+            if fs.exists(&target_path) && fs.is_file(&target_path) {
+                return target_path.to_str().map(|s| s.to_string());
             }
-            None
         }
-        Err(_) => None
     }
+    if !found_current {
+        for path_item in env::split_paths(path_var) {
+            let target_path = path_item.join(&executable_name_as_path);
+            if fs.exists(&target_path) && fs.is_file(&target_path) {
+                return target_path.to_str().map(|s| s.to_string());
+            }
+        }
+    }
+    None
 }
 
 pub trait FileSystemWrapper {
@@ -65,8 +53,6 @@ impl FileSystemWrapper for OsFileSystemWrapper {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
     use super::*;
     use std::path::Path;
     use std::collections::HashMap;
@@ -78,15 +64,11 @@ mod tests {
 
     impl TestFileDescriptor {
         pub fn file() -> TestFileDescriptor {
-            TestFileDescriptor {
-                is_file: true
-            }
+            TestFileDescriptor { is_file: true }
         }
 
         pub fn symlink() -> TestFileDescriptor {
-            TestFileDescriptor {
-                is_file: false
-            }
+            TestFileDescriptor { is_file: false }
         }
     }
 
@@ -97,7 +79,7 @@ mod tests {
     impl TestFileSystemWrapper {
         pub fn create() -> TestFileSystemWrapper {
             TestFileSystemWrapper {
-                path_to_descriptor: HashMap::new()
+                path_to_descriptor: HashMap::new(),
             }
         }
 
@@ -118,18 +100,17 @@ mod tests {
         }
     }
 
+    fn make_path(entries: &[&str]) -> String {
+        entries.join(":")
+    }
+
     #[test]
     fn target_executable_can_be_found_later_in_the_path() {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/bin/alias", &TestFileDescriptor::file());
         fs.add("/usr/bin/alias", &TestFileDescriptor::file());
-        set_path(vec![
-            "/bin",
-            "/usr/bin"]);
-        let autodetect = autodetect_executable(
-            Path::new("/bin"),
-            "alias",
-            &fs).unwrap();
+        let path = make_path(&["/bin", "/usr/bin"]);
+        let autodetect = autodetect_executable(Path::new("/bin"), "alias", &path, &fs).unwrap();
         assert_eq!("/usr/bin/alias", autodetect);
     }
 
@@ -138,13 +119,8 @@ mod tests {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/bin/alias", &TestFileDescriptor::file());
         fs.add("/usr/bin/alias", &TestFileDescriptor::symlink());
-        set_path(vec![
-            "/bin",
-            "/usr/bin"]);
-        assert!(autodetect_executable(
-            Path::new("/bin"),
-            "alias",
-            &fs).is_none());
+        let path = make_path(&["/bin", "/usr/bin"]);
+        assert!(autodetect_executable(Path::new("/bin"), "alias", &path, &fs).is_none());
     }
 
     #[test]
@@ -152,70 +128,46 @@ mod tests {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/home/username/alias_app/alias", &TestFileDescriptor::file());
         fs.add("/home/username/some_app/alias", &TestFileDescriptor::file());
-        set_path(vec![
+        let path = make_path(&[
             "/home/username/some_app",
             "/home/username/alias_app",
             "/bin",
-            "/usr/bin"]);
+            "/usr/bin",
+        ]);
         assert!(autodetect_executable(
             Path::new("/home/username/alias_app"),
             "alias",
-            &fs)
-            .is_none());
+            &path,
+            &fs,
+        ).is_none());
     }
 
     #[test]
     fn alias_path_does_not_exist_in_path() {
         let fs = TestFileSystemWrapper::create();
-        set_path(vec![
-            "/bin",
-            "/usr/bin"]);
-        assert!(autodetect_executable(
-            Path::new("/home/username/app"),
-            "alias",
-            &fs)
-            .is_none());
+        let path = make_path(&["/bin", "/usr/bin"]);
+        assert!(autodetect_executable(Path::new("/home/username/app"), "alias", &path, &fs).is_none());
     }
 
     #[test]
     fn alias_path_exists_but_target_executable_doesnt() {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/home/username/app/alias", &TestFileDescriptor::file());
-        set_path(vec![
-            "/home/username/app",
-            "/bin",
-            "/usr/bin"]);
-        assert!(autodetect_executable(
-            Path::new("/home/username/app"),
-            "alias",
-            &fs)
-            .is_none());
+        let path = make_path(&["/home/username/app", "/bin", "/usr/bin"]);
+        assert!(autodetect_executable(Path::new("/home/username/app"), "alias", &path, &fs).is_none());
     }
 
     #[test]
     fn wrapper_doesnt_exist_in_path_try_to_find_first_executable_that_has_the_same_name() {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/usr/bin/alias", &TestFileDescriptor::file());
-        set_path(vec![
-            "/bin",
-            "/usr/bin"]);
+        let path = make_path(&["/bin", "/usr/bin"]);
         let autodetect = autodetect_executable(
             Path::new("/home/username/app"),
             "alias",
-            &fs)
-            .unwrap();
+            &path,
+            &fs,
+        ).unwrap();
         assert_eq!("/usr/bin/alias", autodetect);
-    }
-
-    fn set_path(path_strings: Vec<&str>) {
-        let paths: Vec<&Path> = path_strings
-            .into_iter()
-            .map(|p| Path::new(p))
-            .collect();
-        let path_os_string = env::join_paths(
-            paths.iter()).unwrap();
-        unsafe {
-            env::set_var("PATH", path_os_string);
-        }
     }
 }

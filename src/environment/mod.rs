@@ -30,9 +30,11 @@ impl Environment {
     }
 
     pub fn try_detect_executable(&self) -> Option<String> {
+        let path_var = env::var("PATH").unwrap_or_default();
         autodetect_executable(
             self.executable_dir().as_path(),
             self.executable_name.as_str(),
+            &path_var,
             &OsFileSystemWrapper {})
     }
 }
