@@ -207,8 +207,7 @@ pub fn empty_configuration() -> Configuration {
 pub fn get_configuration(environment: &Environment) -> Result<Configuration, String> {
     let executable_dir = environment.executable_dir();
     let config_file_path = get_config_path(executable_dir);
-    create_config_if_needed(&config_file_path, &environment)
-        .unwrap();
+    create_config_if_needed(&config_file_path, environment)?;
     let configuration = read_configuration(&config_file_path);
     if configuration.is_err() {
         return configuration;
