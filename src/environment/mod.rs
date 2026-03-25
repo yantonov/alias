@@ -72,13 +72,13 @@ impl SystemEnvironment {
     }
 }
 
-pub fn system_environment() -> Environment {
+pub fn system_environment() -> Result<Environment, String> {
     let sys_env = SystemEnvironment {};
-    Environment {
-        executable_name: sys_env.executable_name().unwrap(),
-        executable_dir: sys_env.executable_dir().unwrap(),
+    Ok(Environment {
+        executable_name: sys_env.executable_name()?,
+        executable_dir: sys_env.executable_dir()?,
         args: sys_env.call_arguments(),
-        shell: sys_env.shell().unwrap(),
-    }
+        shell: sys_env.shell().map_err(|e| e.to_string())?,
+    })
 }
 

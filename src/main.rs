@@ -25,7 +25,13 @@ fn get_handler(environment: &environment::Environment) -> Box<dyn Handler> {
 }
 
 fn main() {
-    let environment = environment::system_environment();
+    let environment = match environment::system_environment() {
+        Ok(env) => env,
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    };
 
     let configuration = config::get_configuration(&environment);
 
