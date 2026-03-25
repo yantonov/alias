@@ -74,6 +74,18 @@ impl SystemEnvironment {
     }
 }
 
+#[cfg(test)]
+impl Environment {
+    pub fn for_testing(executable_dir: PathBuf) -> Self {
+        Environment {
+            executable_name: "test".to_string(),
+            executable_dir,
+            args: vec!["test".to_string()],
+            shell: "/bin/sh".to_string(),
+        }
+    }
+}
+
 pub fn system_environment() -> Result<Environment, String> {
     let sys_env = SystemEnvironment {};
     Ok(Environment {

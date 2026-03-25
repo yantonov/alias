@@ -228,6 +228,7 @@ pub fn get_configuration(environment: &Environment) -> Result<Configuration, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::environment::Environment;
 
     fn get_table(section_name: &str, alias_name: &str, alias_value: &str) -> Value {
         let mut table: Map<String, Value> = Map::new();
@@ -306,5 +307,65 @@ mod tests {
             ("co".to_string(), "checkout main".to_string()),
             ("st".to_string(), "status".to_string()),
         ]);
+    }
+
+    #[test]
+    fn get_configuration_creates_default_config_when_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let env = Environment::for_testing(dir.path().to_path_buf());
+        let result = get_configuration(&env);
+        assert!(result.is_ok(), "expected Ok but got: {:?}", result.err());
+        assert!(dir.path().join("config.toml").exists(), "config.toml should have been created");
+    }
+
+    #[test]
+    fn get_configuration_reads_existing_config() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("config.toml"),
+            "[alias]\nco = \"checkout main\"\n",
+        ).unwrap();
+        let env = Environment::for_testing(dir.path().to_path_buf());
+        let config = get_configuration(&env).unwrap();
+        match config.get_alias("co").unwrap().unwrap() {
+            Alias::RegularAlias(args) => assert_eq!(args, vec!["checkout", "main"]),
+            _ => panic!("expected RegularAlias"),
+        }
+    }
+
+    #[test]
+    fn get_configuration_merges_override_file() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("config.toml"),
+            "[alias]\nco = \"checkout main\"\n",
+        ).unwrap();
+        std::fs::write(
+            dir.path().join("override.toml"),
+            "[alias]\nst = \"status\"\n",
+        ).unwrap();
+        let env = Environment::for_testing(dir.path().to_path_buf());
+        let config = get_configuration(&env).unwrap();
+        assert!(config.get_alias("co").unwrap().is_some(), "co from config.toml should be present");
+        assert!(config.get_alias("st").unwrap().is_some(), "st from override.toml should be present");
+    }
+
+    #[test]
+    fn get_configuration_override_replaces_existing_alias() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("config.toml"),
+            "[alias]\nco = \"checkout main\"\n",
+        ).unwrap();
+        std::fs::write(
+            dir.path().join("override.toml"),
+            "[alias]\nco = \"checkout develop\"\n",
+        ).unwrap();
+        let env = Environment::for_testing(dir.path().to_path_buf());
+        let config = get_configuration(&env).unwrap();
+        match config.get_alias("co").unwrap().unwrap() {
+            Alias::RegularAlias(args) => assert_eq!(args, vec!["checkout", "develop"]),
+            _ => panic!("expected RegularAlias"),
+        }
     }
 }
