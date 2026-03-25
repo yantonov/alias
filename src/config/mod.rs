@@ -208,26 +208,16 @@ pub fn get_configuration(environment: &Environment) -> Result<Configuration, Str
     let executable_dir = environment.executable_dir();
     let config_file_path = get_config_path(executable_dir);
     create_config_if_needed(&config_file_path, environment)?;
-    let configuration = read_configuration(&config_file_path);
-    if configuration.is_err() {
-        return configuration;
-    };
+    let configuration = read_configuration(&config_file_path)?;
 
     let config_override_file_path = get_config_override_path(executable_dir);
-    let override_configuration =
-        if config_override_file_path.exists() {
-            read_configuration(
-                &config_override_file_path)
-        } else {
-            Ok(empty_configuration())
-        };
-    if override_configuration.is_err() {
-        return override_configuration;
-    }
+    let override_configuration = if config_override_file_path.exists() {
+        read_configuration(&config_override_file_path)?
+    } else {
+        empty_configuration()
+    };
 
-    Ok(merge(
-        &configuration.unwrap(),
-        &override_configuration.unwrap()))
+    Ok(merge(&configuration, &override_configuration))
 }
 
 #[cfg(test)]
