@@ -39,41 +39,6 @@ impl Environment {
     }
 }
 
-struct SystemEnvironment {}
-
-impl SystemEnvironment {
-    pub fn executable_name(&self) -> Result<String, String> {
-        env::current_exe()
-            .map(|x| x
-                .file_name()
-                .expect("cannot detect filename")
-                .to_str()
-                .expect("cannot convert filename to string")
-                .to_string())
-            .map_err(|_| "cannot get current executable".to_string())
-    }
-
-    pub fn executable_dir(&self) -> Result<PathBuf, String> {
-        let executable = env::current_exe()
-            .map_err(|_| "cannot get current executable")?;
-        match executable
-            .parent()
-            .map(|x| x.to_path_buf()) {
-            None => Err("cannot get parent directory".to_string()),
-            Some(v) => Ok(v),
-        }
-    }
-
-    pub fn call_arguments(&self) -> Vec<String> {
-        env::args().collect()
-    }
-
-    pub fn shell(&self) -> Result<String, &str> {
-        env::var("SHELL")
-            .map_err(|_| "SHELL environment variable is not defined")
-    }
-}
-
 #[cfg(test)]
 impl Environment {
     pub fn for_testing(executable_dir: PathBuf) -> Self {
@@ -87,12 +52,24 @@ impl Environment {
 }
 
 pub fn system_environment() -> Result<Environment, String> {
-    let sys_env = SystemEnvironment {};
+    let exe = env::current_exe()
+        .map_err(|_| "cannot get current executable".to_string())?;
+    let executable_name = exe
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or("cannot extract executable filename")?
+        .to_string();
+    let executable_dir = exe
+        .parent()
+        .ok_or("cannot get executable parent directory")?
+        .to_path_buf();
+    let shell = env::var("SHELL")
+        .map_err(|_| "SHELL environment variable is defined".to_string())?;
     Ok(Environment {
-        executable_name: sys_env.executable_name()?,
-        executable_dir: sys_env.executable_dir()?,
-        args: sys_env.call_arguments(),
-        shell: sys_env.shell().map_err(|e| e.to_string())?,
+        executable_name,
+        executable_dir,
+        args: env::args().collect(),
+        shell,
     })
 }
 
