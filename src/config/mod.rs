@@ -98,7 +98,12 @@ impl Configuration {
         match self.config.get("alias").and_then(|x| x.as_table()) {
             Some(table) => {
                 let mut aliases: Vec<(String, String)> = table.iter()
-                    .map(|(key, value)| (key.clone(), format!("{}", value)))
+                    .map(|(key, value)| {
+                        let display = value.as_str()
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| value.to_string());
+                        (key.clone(), display)
+                    })
                     .collect();
                 aliases.sort_by(|a, b| a.0.cmp(&b.0));
                 aliases
@@ -291,5 +296,15 @@ mod tests {
     fn unknown_alias_returns_none() {
         let config = parse_config("[alias]\nfoo = \"bar\"");
         assert!(config.get_alias("baz").unwrap().is_none());
+    }
+
+    #[test]
+    fn list_aliases_returns_unquoted_string_values() {
+        let config = parse_config("[alias]\nco = \"checkout main\"\nst = \"status\"");
+        let aliases = config.list_aliases();
+        assert_eq!(aliases, vec![
+            ("co".to_string(), "checkout main".to_string()),
+            ("st".to_string(), "status".to_string()),
+        ]);
     }
 }
