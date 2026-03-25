@@ -165,14 +165,8 @@ fn merge_values(v1: &Value,
 
 fn create_config_if_needed(config_file_path: &Path, environment: &Environment) -> Result<(), String> {
     if !config_file_path.exists() {
-        let config_file_path_str =
-            match config_file_path.to_str() {
-                None => Err("cannot convert path to string"),
-                Some(v) => Ok(v),
-            }?;
-
         let mut f = File::create(config_file_path)
-            .map_err(|_| format!("Unable to create {} file", config_file_path_str))?;
+            .map_err(|_| format!("Unable to create {} file", config_file_path.display()))?;
 
         let auto_detect_executable = environment.try_detect_executable();
 
@@ -194,13 +188,13 @@ fn create_config_if_needed(config_file_path: &Path, environment: &Environment) -
 pub fn read_configuration(config_file_path: &Path) -> Result<Configuration, String> {
     let contents = fs::read_to_string(config_file_path)
         .map_err(|_| format!("Something went wrong while reading the config file: {}",
-                             config_file_path.to_str().unwrap()))?;
+                             config_file_path.display()))?;
 
     let config = contents
         .parse::<Value>()
         .map_err(|e|
             format!("[ERROR] Cannot parse config file: {}. {}",
-                    config_file_path.to_str().unwrap(),
+                    config_file_path.display(),
                     e))?;
 
     Ok(Configuration { config })
