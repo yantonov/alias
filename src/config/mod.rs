@@ -237,14 +237,7 @@ mod tests {
         let origin = get_table("section", "first", "value1");
         let override_config = get_table("section", "second", "value2");
         let result = merge_values(&origin, &override_config);
-        let maybe_section = result.get("section");
-        match maybe_section {
-            None => {
-                assert!(false, "'section' not found")
-            }
-            _ => {}
-        }
-        let section = maybe_section.unwrap();
+        let section = result.get("section").expect("'section' not found");
         assert!(section.is_table());
         assert_eq!("value1", section.get("first").unwrap().as_str().unwrap());
         assert_eq!("value2", section.get("second").unwrap().as_str().unwrap());
