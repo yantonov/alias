@@ -37,4 +37,32 @@ mod tests {
         assert_eq!("${NOT_EXISTING_VAR}/not_replaced",
                    expand_env_var("${NOT_EXISTING_VAR}/not_replaced"));
     }
+
+    #[test]
+    fn multiple_vars_in_one_string_are_all_expanded() {
+        unsafe {
+            env::set_var("EXPAND_MULTI_A", "foo");
+            env::set_var("EXPAND_MULTI_B", "bar");
+        }
+        assert_eq!("foo/bar", expand_env_var("${EXPAND_MULTI_A}/${EXPAND_MULTI_B}"));
+    }
+
+    #[test]
+    fn adjacent_vars_are_both_expanded() {
+        unsafe {
+            env::set_var("EXPAND_ADJ_A", "hello");
+            env::set_var("EXPAND_ADJ_B", "world");
+        }
+        assert_eq!("helloworld", expand_env_var("${EXPAND_ADJ_A}${EXPAND_ADJ_B}"));
+    }
+
+    #[test]
+    fn empty_string_returns_empty_string() {
+        assert_eq!("", expand_env_var(""));
+    }
+
+    #[test]
+    fn string_without_vars_is_returned_unchanged() {
+        assert_eq!("no/vars/here", expand_env_var("no/vars/here"));
+    }
 }
