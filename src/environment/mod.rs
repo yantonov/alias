@@ -25,8 +25,8 @@ impl Environment {
         &self.args[1..self.args.len()]
     }
 
-    pub fn shell(&self) -> String {
-        self.shell.to_string()
+    pub fn shell(&self) -> &str {
+        &self.shell
     }
 
     pub fn try_detect_executable(&self) -> Option<String> {

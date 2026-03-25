@@ -41,7 +41,7 @@ fn get_executable(environment: &Environment, configuration: &Configuration) -> R
         .or_else(|| environment.try_detect_executable()))
 }
 
-fn forward_call_to_target_application(configuration: &Configuration, call_arguments: &[String], executable: String, shell: String) -> Result<CallContext, String> {
+fn forward_call_to_target_application(configuration: &Configuration, call_arguments: &[String], executable: String, shell: &str) -> Result<CallContext, String> {
     let mut args = Vec::new();
     let run_as_shell = run_as_shell(configuration)?;
     if run_as_shell {
@@ -52,12 +52,12 @@ fn forward_call_to_target_application(configuration: &Configuration, call_argume
     }
 
     Ok(CallContext {
-        executable: if run_as_shell { shell } else { executable },
+        executable: if run_as_shell { shell.to_string() } else { executable },
         args,
     })
 }
 
-fn handle_regular_alias(configuration: &Configuration, call_arguments: &&[String], executable: &String, shell: &String, alias_arguments: Vec<String>) -> Result<CallContext, String> {
+fn handle_regular_alias(configuration: &Configuration, call_arguments: &&[String], executable: &String, shell: &str, alias_arguments: Vec<String>) -> Result<CallContext, String> {
     let mut args = Vec::new();
     let run_as_shell = run_as_shell(configuration)?;
     if run_as_shell {
@@ -75,7 +75,7 @@ fn handle_regular_alias(configuration: &Configuration, call_arguments: &&[String
     })
 }
 
-fn handle_shell_alias(call_arguments: &&[String], shell: &String, shell_command: String) -> Result<CallContext, String> {
+fn handle_shell_alias(call_arguments: &&[String], shell: &str, shell_command: String) -> Result<CallContext, String> {
     let mut args = vec![
         "-c".to_string(),
         shell_command,
@@ -85,7 +85,7 @@ fn handle_shell_alias(call_arguments: &&[String], shell: &String, shell_command:
     }
     Ok(CallContext {
         executable: shell.to_string(),
-        args: args.iter().map(|t| t.to_string()).collect(),
+        args,
     })
 }
 
