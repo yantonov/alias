@@ -1,20 +1,15 @@
 use std::env;
+use std::sync::LazyLock;
 use regex::{Captures, Regex};
 
+static ENV_VAR_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\$\{([^{}]+)\}").unwrap());
+
 pub fn expand_env_var(path: &str) -> String {
-    let re = Regex::new(r"(\$\{[^{}]+\})").unwrap();
-    let expanded = re.replace_all(
-        path,
-        |captures: &Captures| -> String {
-            let env_var = captures
-                .get(1)
-                .unwrap()
-                .as_str()
-                .to_string();
-            env::var(&env_var[2..(env_var.len() - 1)])
-                .unwrap_or(env_var)
-        });
-    expanded.into_owned()
+    ENV_VAR_RE.replace_all(path, |captures: &Captures| -> String {
+        let name = captures.get(1).unwrap().as_str();
+        env::var(name).unwrap_or_else(|_| format!("${{{}}}", name))
+    }).into_owned()
 }
 
 #[cfg(test)]
