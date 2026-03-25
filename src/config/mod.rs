@@ -262,4 +262,34 @@ mod tests {
         let section = maybe_section.unwrap();
         assert_eq!("value2", section.get("key").unwrap().as_str().unwrap());
     }
+
+    fn parse_config(toml: &str) -> Configuration {
+        Configuration {
+            config: toml.parse::<Value>().expect("invalid test toml"),
+        }
+    }
+
+    #[test]
+    fn shell_alias_strips_bang_prefix() {
+        let config = parse_config("[alias]\nfoo = \"!echo hello\"");
+        match config.get_alias("foo").unwrap().unwrap() {
+            Alias::ShellAlias(cmd) => assert_eq!(cmd, "echo hello"),
+            Alias::RegularAlias(_) => panic!("expected ShellAlias"),
+        }
+    }
+
+    #[test]
+    fn regular_alias_is_split_into_args() {
+        let config = parse_config("[alias]\nco = \"checkout main\"");
+        match config.get_alias("co").unwrap().unwrap() {
+            Alias::RegularAlias(args) => assert_eq!(args, vec!["checkout", "main"]),
+            Alias::ShellAlias(_) => panic!("expected RegularAlias"),
+        }
+    }
+
+    #[test]
+    fn unknown_alias_returns_none() {
+        let config = parse_config("[alias]\nfoo = \"bar\"");
+        assert!(config.get_alias("baz").unwrap().is_none());
+    }
 }
