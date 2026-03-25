@@ -5,31 +5,24 @@ pub fn autodetect_executable(executable_path: &Path,
                              executable_name: &str,
                              path_var: &str,
                              fs: &dyn FileSystemWrapper) -> Option<String> {
-    let executable_name_as_path = Path::new(executable_name);
-    let mut found_current = false;
-    for path_item in env::split_paths(path_var) {
-        if !found_current {
-            if path_item.as_path() == executable_path {
-                // here we found the current directory and alias wrapper,
-                // therefore not the target executable
-                found_current = true;
-            }
+    let paths: Vec<_> = env::split_paths(path_var).collect();
+
+    // Search only after the wrapper's own directory in PATH, so we skip the
+    // wrapper itself and find the real target executable.
+    let start = paths
+        .iter()
+        .position(|p| p.as_path() == executable_path)
+        .map(|i| i + 1)
+        .unwrap_or(0);
+
+    paths[start..].iter().find_map(|path_item| {
+        let target = path_item.join(executable_name);
+        if fs.exists(&target) && fs.is_file(&target) {
+            target.to_str().map(|s| s.to_string())
         } else {
-            let target_path = path_item.join(&executable_name_as_path);
-            if fs.exists(&target_path) && fs.is_file(&target_path) {
-                return target_path.to_str().map(|s| s.to_string());
-            }
+            None
         }
-    }
-    if !found_current {
-        for path_item in env::split_paths(path_var) {
-            let target_path = path_item.join(&executable_name_as_path);
-            if fs.exists(&target_path) && fs.is_file(&target_path) {
-                return target_path.to_str().map(|s| s.to_string());
-            }
-        }
-    }
-    None
+    })
 }
 
 pub trait FileSystemWrapper {
