@@ -1,6 +1,7 @@
 use handler::alias_list::AliasListHandler;
 use handler::default::DefaultHandler;
 use handler::error::ErrorHandler;
+use handler::version::VersionHandler;
 use handler::Handler;
 use config::empty_configuration;
 
@@ -18,6 +19,9 @@ fn get_handler(environment: &environment::Environment) -> Box<dyn Handler> {
         let command = &call_arguments[0];
         if command == "--aliases" {
             return Box::new(AliasListHandler::new());
+        }
+        if command == "--version" {
+            return Box::new(VersionHandler::new());
         }
     }
 
