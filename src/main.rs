@@ -1,6 +1,7 @@
 use handler::alias_list::AliasListHandler;
 use handler::default::DefaultHandler;
 use handler::error::ErrorHandler;
+use handler::help::HelpHandler;
 use handler::version::VersionHandler;
 use handler::Handler;
 use config::empty_configuration;
@@ -22,6 +23,9 @@ fn get_handler(environment: &environment::Environment) -> Box<dyn Handler> {
         }
         if command == "--version" {
             return Box::new(VersionHandler::new());
+        }
+        if command == "--help" {
+            return Box::new(HelpHandler::new());
         }
     }
 

@@ -3,6 +3,7 @@ use crate::{config, environment};
 pub mod default;
 pub mod alias_list;
 pub mod error;
+pub mod help;
 pub mod version;
 
 pub trait Handler {
