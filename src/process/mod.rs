@@ -31,6 +31,21 @@ pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
     exec(&context.executable, &context.args)
 }
 
+pub fn try_execute_captured(context: &CallContext) -> Result<Option<i32>, String> {
+    let output = Command::new(&context.executable)
+        .args(&context.args)
+        .output()
+        .map_err(|e| format!("Failed to execute process [{}]. {}",
+                             format_command(&context.executable, &context.args), e))?;
+
+    let code = output.status.code();
+    if code == Some(0) {
+        print!("{}", String::from_utf8_lossy(&output.stdout));
+        eprint!("{}", String::from_utf8_lossy(&output.stderr));
+    }
+    Ok(code)
+}
+
 pub fn exit(code: Option<i32>) -> ! {
     std::process::exit(code.unwrap_or(-1));
 }

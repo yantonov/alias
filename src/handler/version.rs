@@ -1,14 +1,15 @@
 use crate::config::Configuration;
 use crate::environment::Environment;
-use crate::handler::Handler;
+use crate::handler::{passthrough, Handler};
 
 pub struct VersionHandler {}
 
 impl Handler for VersionHandler {
     fn handle(&self,
-              _environment: &Environment,
-              _configuration: &Configuration) {
-        println!("{}", env!("CARGO_PKG_VERSION"));
+              environment: &Environment,
+              configuration: &Configuration) {
+        println!("alias wrapper version {}", env!("CARGO_PKG_VERSION"));
+        passthrough::try_passthrough(environment, configuration, &["--version"]);
     }
 }
 
