@@ -1,5 +1,5 @@
 use crate::config::Alias::{RegularAlias, ShellAlias};
-use crate::config::{Alias, Configuration};
+use crate::config::Configuration;
 use crate::environment::{expand_env, Environment};
 use crate::handler::Handler;
 use crate::process::CallContext;
@@ -12,50 +12,15 @@ fn get_call_context(environment: &Environment,
         .ok_or(format!("Cannot autodetect executable: {}", environment.executable_name()))?;
     let shell = environment.shell();
 
-    if call_arguments.len() >= 2 && configuration.is_group(&call_arguments[0]) {
-        let aliased = configuration.get_group_alias(&call_arguments[0], &call_arguments[1])?;
-        let remaining = &call_arguments[2..];
-        return match aliased {
-            Some(ShellAlias(cmd)) => {
-                let mut args = vec!["-c".to_string(), cmd, "script".to_string()];
-                args.extend(remaining.iter().cloned());
-                Ok(CallContext { executable: shell.to_string(), args })
-            }
-            Some(RegularAlias(alias_args)) => {
-                let as_shell = run_as_shell(configuration)?;
-                let mut args = Vec::new();
-                if as_shell { args.push(executable.clone()); }
-                args.extend(alias_args);
-                args.extend(remaining.iter().cloned());
-                Ok(CallContext {
-                    executable: if as_shell { shell.to_string() } else { executable },
-                    args,
-                })
-            }
-            None => forward_call_to_target_application(configuration, call_arguments, executable, shell),
-        };
-    }
-
-    let aliased_command: Option<Alias> = if call_arguments.is_empty() {
-        None
-    } else {
-        configuration.get_alias(&call_arguments[0])?
-    };
-
-    match aliased_command {
-        Some(alias) => {
+    match configuration.resolve_alias(call_arguments)? {
+        Some((alias, consumed)) => {
+            let remaining = &call_arguments[consumed..];
             match alias {
-                ShellAlias(shell_command) => {
-                    handle_shell_alias(&call_arguments, &shell, shell_command)
-                }
-                RegularAlias(alias_arguments) => {
-                    handle_regular_alias(configuration, &call_arguments, &executable, &shell, alias_arguments)
-                }
+                ShellAlias(cmd) => handle_shell_alias(remaining, &shell, cmd),
+                RegularAlias(alias_args) => handle_regular_alias(configuration, remaining, &executable, &shell, alias_args),
             }
         }
-        None => {
-            forward_call_to_target_application(configuration, call_arguments, executable, shell)
-        }
+        None => forward_call_to_target_application(configuration, call_arguments, executable, shell),
     }
 }
 
@@ -81,16 +46,16 @@ fn forward_call_to_target_application(configuration: &Configuration, call_argume
     })
 }
 
-fn handle_regular_alias(configuration: &Configuration, call_arguments: &&[String], executable: &String, shell: &str, alias_arguments: Vec<String>) -> Result<CallContext, String> {
+fn handle_regular_alias(configuration: &Configuration, remaining: &[String], executable: &str, shell: &str, alias_arguments: Vec<String>) -> Result<CallContext, String> {
     let mut args = Vec::new();
     let run_as_shell = run_as_shell(configuration)?;
     if run_as_shell {
-        args.push(executable.clone());
+        args.push(executable.to_string());
     }
     for a in alias_arguments {
         args.push(a);
     }
-    for p in &call_arguments[1..call_arguments.len()] {
+    for p in remaining {
         args.push(p.to_string());
     }
     Ok(CallContext {
@@ -99,12 +64,9 @@ fn handle_regular_alias(configuration: &Configuration, call_arguments: &&[String
     })
 }
 
-fn handle_shell_alias(call_arguments: &&[String], shell: &str, shell_command: String) -> Result<CallContext, String> {
-    let mut args = vec![
-        "-c".to_string(),
-        shell_command,
-        "script".to_string()];
-    for p in &call_arguments[1..call_arguments.len()] {
+fn handle_shell_alias(remaining: &[String], shell: &str, shell_command: String) -> Result<CallContext, String> {
+    let mut args = vec!["-c".to_string(), shell_command, "script".to_string()];
+    for p in remaining {
         args.push(p.clone());
     }
     Ok(CallContext {
