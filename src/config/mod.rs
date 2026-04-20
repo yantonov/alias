@@ -17,6 +17,45 @@ pub enum Alias {
     RegularAlias(Vec<String>),
 }
 
+pub enum AliasNode {
+    Leaf(String),
+    Group(Vec<(String, AliasNode)>),
+}
+
+fn resolve_in_table(table: &Map<String, Value>, args: &[String], consumed: usize) -> Result<Option<(Alias, usize)>, String> {
+    if args.is_empty() {
+        return Ok(None);
+    }
+    match table.get(&args[0]) {
+        None => Ok(None),
+        Some(v) => {
+            if let Some(s) = v.as_str() {
+                Ok(Some((parse_alias_str(s), consumed + 1)))
+            } else if let Some(t) = v.as_table() {
+                resolve_in_table(t, &args[1..], consumed + 1)
+            } else {
+                Ok(None)
+            }
+        }
+    }
+}
+
+fn build_alias_tree(table: &Map<String, Value>) -> Vec<(String, AliasNode)> {
+    let mut entries: Vec<(String, AliasNode)> = table.iter()
+        .filter_map(|(k, v)| {
+            if let Some(s) = v.as_str() {
+                Some((k.clone(), AliasNode::Leaf(s.to_string())))
+            } else if let Some(t) = v.as_table() {
+                Some((k.clone(), AliasNode::Group(build_alias_tree(t))))
+            } else {
+                None
+            }
+        })
+        .collect();
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+    entries
+}
+
 fn parse_alias_str(value: &str) -> Alias {
     if value.starts_with('!') {
         Alias::ShellAlias(value.chars().skip(1).collect())
@@ -135,6 +174,20 @@ impl Configuration {
                 groups.sort();
                 groups
             }
+            None => vec![],
+        }
+    }
+
+    pub fn resolve_alias(&self, args: &[String]) -> Result<Option<(Alias, usize)>, String> {
+        match self.config.get("alias").and_then(|v| v.as_table()) {
+            Some(table) => resolve_in_table(table, args, 0),
+            None => Ok(None),
+        }
+    }
+
+    pub fn list_alias_tree(&self) -> Vec<(String, AliasNode)> {
+        match self.config.get("alias").and_then(|v| v.as_table()) {
+            Some(table) => build_alias_tree(table),
             None => vec![],
         }
     }
@@ -416,6 +469,97 @@ mod tests {
             ("exec".to_string(), "exec -it".to_string()),
             ("run".to_string(), "container run".to_string()),
         ]);
+    }
+
+    #[test]
+    fn resolve_alias_finds_flat_alias() {
+        let config = parse_config("[alias]\nco = \"checkout main\"");
+        match config.resolve_alias(&["co".to_string()]).unwrap() {
+            Some((Alias::RegularAlias(args), consumed)) => {
+                assert_eq!(args, vec!["checkout", "main"]);
+                assert_eq!(consumed, 1);
+            }
+            _ => panic!("expected RegularAlias with consumed=1"),
+        }
+    }
+
+    #[test]
+    fn resolve_alias_finds_one_level_group_alias() {
+        let config = parse_config("[alias.docker]\nps = \"container ls\"");
+        match config.resolve_alias(&["docker".to_string(), "ps".to_string()]).unwrap() {
+            Some((Alias::RegularAlias(args), consumed)) => {
+                assert_eq!(args, vec!["container", "ls"]);
+                assert_eq!(consumed, 2);
+            }
+            _ => panic!("expected RegularAlias with consumed=2"),
+        }
+    }
+
+    #[test]
+    fn resolve_alias_finds_nested_group_alias() {
+        let config = parse_config("[alias.docker.container]\nls = \"container ls\"");
+        match config.resolve_alias(&["docker".to_string(), "container".to_string(), "ls".to_string()]).unwrap() {
+            Some((Alias::RegularAlias(args), consumed)) => {
+                assert_eq!(args, vec!["container", "ls"]);
+                assert_eq!(consumed, 3);
+            }
+            _ => panic!("expected RegularAlias with consumed=3"),
+        }
+    }
+
+    #[test]
+    fn resolve_alias_returns_none_for_unknown() {
+        let config = parse_config("[alias]\nfoo = \"bar\"");
+        assert!(config.resolve_alias(&["unknown".to_string()]).unwrap().is_none());
+    }
+
+    #[test]
+    fn resolve_alias_returns_none_when_args_exhausted_at_group() {
+        let config = parse_config("[alias.docker]\nps = \"container ls\"");
+        assert!(config.resolve_alias(&["docker".to_string()]).unwrap().is_none());
+    }
+
+    #[test]
+    fn resolve_alias_shell_alias_at_nested_depth() {
+        let config = parse_config("[alias.docker.container]\nclean = \"!docker system prune\"");
+        match config.resolve_alias(&["docker".to_string(), "container".to_string(), "clean".to_string()]).unwrap() {
+            Some((Alias::ShellAlias(cmd), consumed)) => {
+                assert_eq!(cmd, "docker system prune");
+                assert_eq!(consumed, 3);
+            }
+            _ => panic!("expected ShellAlias with consumed=3"),
+        }
+    }
+
+    #[test]
+    fn list_alias_tree_flat_and_nested() {
+        let config = parse_config("[alias]\nfoo = \"bar\"\n\n[alias.docker.container]\nls = \"container ls\"");
+        let tree = config.list_alias_tree();
+        assert_eq!(tree.len(), 2);
+        assert_eq!(tree[0].0, "docker");
+        assert_eq!(tree[1].0, "foo");
+        match &tree[1].1 {
+            AliasNode::Leaf(v) => assert_eq!(v, "bar"),
+            _ => panic!("expected Leaf for foo"),
+        }
+        match &tree[0].1 {
+            AliasNode::Group(children) => {
+                assert_eq!(children.len(), 1);
+                assert_eq!(children[0].0, "container");
+                match &children[0].1 {
+                    AliasNode::Group(sub) => {
+                        assert_eq!(sub.len(), 1);
+                        assert_eq!(sub[0].0, "ls");
+                        match &sub[0].1 {
+                            AliasNode::Leaf(v) => assert_eq!(v, "container ls"),
+                            _ => panic!("expected Leaf for ls"),
+                        }
+                    }
+                    _ => panic!("expected Group for container"),
+                }
+            }
+            _ => panic!("expected Group for docker"),
+        }
     }
 
     #[test]
