@@ -11,6 +11,12 @@ impl Handler for AliasListHandler {
         for (key, value) in configuration.list_aliases() {
             println!("{} = {}", key, value);
         }
+        for group in configuration.list_groups() {
+            println!("\n{}:", group);
+            for (key, value) in configuration.list_group_aliases(&group) {
+                println!("  {} = {}", key, value);
+            }
+        }
         passthrough::try_passthrough(environment, configuration, &["--aliases"]);
     }
 }
