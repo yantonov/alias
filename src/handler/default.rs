@@ -12,6 +12,30 @@ fn get_call_context(environment: &Environment,
         .ok_or(format!("Cannot autodetect executable: {}", environment.executable_name()))?;
     let shell = environment.shell();
 
+    if call_arguments.len() >= 2 && configuration.is_group(&call_arguments[0]) {
+        let aliased = configuration.get_group_alias(&call_arguments[0], &call_arguments[1])?;
+        let remaining = &call_arguments[2..];
+        return match aliased {
+            Some(ShellAlias(cmd)) => {
+                let mut args = vec!["-c".to_string(), cmd, "script".to_string()];
+                args.extend(remaining.iter().cloned());
+                Ok(CallContext { executable: shell.to_string(), args })
+            }
+            Some(RegularAlias(alias_args)) => {
+                let as_shell = run_as_shell(configuration)?;
+                let mut args = Vec::new();
+                if as_shell { args.push(executable.clone()); }
+                args.extend(alias_args);
+                args.extend(remaining.iter().cloned());
+                Ok(CallContext {
+                    executable: if as_shell { shell.to_string() } else { executable },
+                    args,
+                })
+            }
+            None => forward_call_to_target_application(configuration, call_arguments, executable, shell),
+        };
+    }
+
     let aliased_command: Option<Alias> = if call_arguments.is_empty() {
         None
     } else {
