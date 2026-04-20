@@ -11,12 +11,14 @@ Therefore, you do not need to pollute a global namespace with shell aliases (usi
 # Table of contents
 1. [Technical notes](#technical-notes)
 2. [Usage](#usage)
-3. [List of aliases](#list-of-aliases)
-4. [Override](#override)
-5. [Target executable location](#target-executable-location)
-6. [Different operating systems](#different-operating-systems)
-7. [Shell scripts on Windows](#shell-scripts-on-windows)
-8. [Examples](#examples)
+3. [Alias types](#alias-types)
+4. [Alias groups](#alias-groups)
+5. [List of aliases](#list-of-aliases)
+6. [Override](#override)
+7. [Target executable location](#target-executable-location)
+8. [Different operating systems](#different-operating-systems)
+9. [Shell scripts on Windows](#shell-scripts-on-windows)
+10. [Examples](#examples)
 
 ## Technical notes
 Technically is just a thin wrapper(proxy) to conditionally run target program.  
@@ -32,6 +34,60 @@ You can get prebuilt binaries [here](https://github.com/yantonov/alias/releases)
 2. Write config (config.toml) and put it near the executable  
 (a sample config will be created at the first launch if it does not exist)
 3. Use custom aliases just like if they are supported out of the box.  
+
+## Alias types
+
+**Regular alias** — expands to a sequence of arguments passed to the target program:
+```toml
+[alias]
+co = "checkout main"
+```
+Running `git co` becomes `git checkout main`.
+
+**Shell alias** — prefixed with `!`, executed by the current shell:
+```toml
+[alias]
+clean = "!rm -rf *.tmp"
+```
+Running `git clean` runs `rm -rf *.tmp` in a shell.
+
+## Alias groups
+
+Aliases can be organized into groups using TOML table nesting. Groups allow you to use multi-word alias prefixes and can be nested to arbitrary depth.
+
+**One-level group:**
+```toml
+[alias.docker]
+ps  = "container ls"
+rmi = "image rm"
+```
+Running `docker ps` becomes `docker container ls`.
+
+**Nested groups:**
+```toml
+[alias.docker.container]
+ls    = "container ls"
+clean = "!docker container prune -f"
+
+[alias.docker.image]
+build = "image build -t"
+ls    = "image ls"
+```
+Running `docker container ls` becomes `docker container ls` (the resolved alias),  
+and `docker image build myapp` becomes `docker image build -t myapp`.
+
+Groups and flat aliases can be freely mixed at any level:
+```toml
+[alias]
+ps = "container ls"          # flat alias
+
+[alias.container]
+ls    = "container ls"       # group alias
+clean = "!docker container prune -f"
+
+[alias.container.log]
+tail = "!docker logs -f"     # doubly-nested group alias
+```
 
 ## List of aliases
 The list of aliases can be shown by using --aliases parameter.

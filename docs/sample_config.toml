@@ -1,5 +1,23 @@
 executable="/usr/bin/git"
 
 [alias]
-test_alias1="branch"
-test_alias2="!echo 'test' $1 $2 $3"
+# regular alias: expands to arguments passed to the target program
+co = "checkout"
+st = "status"
+
+# shell alias: prefixed with !, executed by the current shell
+ls = "!ls -la"
+
+# one-level group: accessed as `git docker ps`
+[alias.docker]
+ps  = "container ls"
+rmi = "image rm"
+
+# nested groups: accessed as `git docker container ls`, `git docker image build`
+[alias.docker.container]
+ls    = "container ls"
+clean = "!docker container prune -f"
+
+[alias.docker.image]
+build = "image build -t"
+ls    = "image ls"
