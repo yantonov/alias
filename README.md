@@ -45,14 +45,18 @@ You can get prebuilt binaries [here](https://github.com/yantonov/alias/releases)
 [alias]
 co = "checkout main"
 ```
-Running `git co` becomes `git checkout main`.
+| Command | Expands to |
+|---------|------------|
+| `git co` | `git checkout main` |
 
 **Shell alias** — prefixed with `!`, executed by the current shell:
 ```toml
 [alias]
 clean = "!rm -rf *.tmp"
 ```
-Running `git clean` runs `rm -rf *.tmp` in a shell.
+| Command | Expands to |
+|---------|------------|
+| `git clean` | `rm -rf *.tmp` |
 
 ## Alias groups and subcommands
 
@@ -66,7 +70,9 @@ This is useful when a tool lacks a subcommand you want (`docker cleanup`, `git s
 ps  = "container ls"
 rmi = "image rm"
 ```
-Running `docker ps` becomes `docker container ls`.
+| Command | Expands to |
+|---------|------------|
+| `docker ps` | `docker container ls` |
 
 **Nested groups:**
 ```toml
@@ -80,10 +86,11 @@ ls    = "image ls"
 [alias.container.log]
 tail = "!docker logs -f"     # doubly-nested group
 ```
-Running   
-`docker container clean` becomes `docker container prune -f`,  
-`docker image build myapp` becomes `docker image build -t myapp`  
-`docker container log tail` becomes `docker logs -f`.
+| Command | Expands to |
+|---------|------------|
+| `docker container clean` | `docker container prune -f` |
+| `docker image build myapp` | `docker image build -t myapp` |
+| `docker container log tail` | `docker logs -f` |
 
 ## List of aliases
 The list of aliases can be shown by using --aliases parameter.
