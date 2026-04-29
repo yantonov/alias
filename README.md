@@ -2,10 +2,10 @@
 
 # Intro
 
-This app helps you to define a custom alias for a command-line utility that has no alias support,  
+This app helps you to define custom aliases/commands for a command-line utility that has no alias support,  
 an example of functionality from [git](https://git-scm.com/book/en/v2/Git-Basics-Git-Aliases), another page about git config [section](https://git-scm.com/docs/git-config#Documentation/git-config.txt-alias)).  
 
-Using this app you can define some aliases (including shell aliases) and use them just like they were defined out of the box.  
+Using this app you can define some aliases/commands/subcommands and use them just like they were defined out of the box.  
 
 # Table of contents
 1. [Technical notes](#technical-notes)
