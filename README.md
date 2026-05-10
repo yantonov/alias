@@ -31,12 +31,20 @@ This app is independent of
 Configuration settings are stored in a separate config,  
 therefore, you do not need to pollute a global namespace with shell aliases (using .zsh/.bashrc/.profile etc).
 
-## Usage
+## Installation
+
+### Manual
 1. Put the executable under PATH, and name it the same as the target program (program without alias support)  
 You can get prebuilt binaries [here](https://github.com/yantonov/alias/releases)
 2. Write config (config.toml) and put it near the executable  
 (a sample config will be created at the first launch if it does not exist)
 3. Use custom aliases just like if they are supported out of the box.  
+
+### Automatic
+You can use this snippet to install alias binary using a selected name to ${HOME}/bin/app-name directory, where <APP_NAME> is the name of the app which you want to configure
+```bash
+    curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/install.sh" | bash -s -- "<APP_NAME>"
+```
 
 ## Alias types
 
