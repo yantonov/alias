@@ -48,6 +48,8 @@ echo "Downloading: ${DOWNLOAD_URL}"
 TMP_DIR="$(mktemp -d)"
 ARCHIVE_PATH="${TMP_DIR}/${ALIAS_APP_NAME}.tar.gz"
 
+echo $ARCHIVE_PATH
+
 # Download archive
 curl -fL "${DOWNLOAD_URL}" -o "${ARCHIVE_PATH}"
 
@@ -55,7 +57,7 @@ curl -fL "${DOWNLOAD_URL}" -o "${ARCHIVE_PATH}"
 tar -xzf "${ARCHIVE_PATH}" -C "${TMP_DIR}"
 
 # Find binary inside extracted files
-BIN_PATH="$(find "${TMP_DIR}" -type f -name "${ALIAS_APP_NAME}*" | head -n 1)"
+BIN_PATH="$(find "${TMP_DIR}" -type f -executable -name "${ALIAS_APP_NAME}" | head -n 1)"
 
 if [ -z "${BIN_PATH}" ]; then
   echo "Binary not found in archive"
