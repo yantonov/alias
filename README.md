@@ -9,7 +9,7 @@ Using this app you can define some aliases/commands/subcommands and use them jus
 
 # Table of contents
 1. [Technical notes](#technical-notes)
-2. [Usage](#usage)
+2. [Installation](#installation)
 3. [Alias types](#alias-types)
 4. [Alias groups and subcommands](#alias-groups-and-subcommands)
 5. [List of aliases](#list-of-aliases)
