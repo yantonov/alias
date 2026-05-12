@@ -41,7 +41,7 @@ You can get prebuilt binaries [here](https://github.com/yantonov/alias/releases)
 3. Use custom aliases just like if they are supported out of the box.  
 
 ### Automatic
-You can use this snippet to install alias binary using a selected name to ${HOME}/bin/app-name directory, where <APP_NAME> is the name of the app which you want to configure
+You can use this snippet to install alias binary using a selected name to ${HOME}/bin/<APP-NAME>-aliases directory, where <APP_NAME> is the name of the app which you want to configure
 ```bash
     curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/install.sh" | bash -s -- "<APP_NAME>"
 ```

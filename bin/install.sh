@@ -9,7 +9,7 @@ if [ -z "${1:-}" ]; then
 fi
 
 APP_NAME="$1"
-TARGET_DIR="${HOME}/bin/${APP_NAME}"
+TARGET_DIR="${HOME}/bin/${APP_NAME}-aliases"
 
 # 1. Create directory if it doesn't exist
 mkdir -p "${TARGET_DIR}"
