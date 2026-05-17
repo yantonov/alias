@@ -6,6 +6,8 @@ This app helps you to define custom aliases/commands for a command-line utility 
 an example of functionality from [git](https://git-scm.com/book/en/v2/Git-Basics-Git-Aliases), another page about git config [section](https://git-scm.com/docs/git-config#Documentation/git-config.txt-alias)).  
 
 Using this app you can define some aliases/commands/subcommands and use them just like they were defined out of the box.  
+It allows to avoid creating global aliases, shell scripts for additional actions and provide additional contextual actions.  
+Intentionally, it is created like a decorator around exiting command-line application.
 
 # Table of contents
 1. [Technical notes](#technical-notes)
