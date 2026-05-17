@@ -57,10 +57,10 @@ curl -fL "${DOWNLOAD_URL}" -o "${ARCHIVE_PATH}"
 tar -xzf "${ARCHIVE_PATH}" -C "${TMP_DIR}"
 
 # Find binary inside extracted files
-BIN_PATH="$(find "${TMP_DIR}" -type f -executable -name "${ALIAS_APP_NAME}" | head -n 1)"
+BIN_PATH="$(find "${TMP_DIR}" -type f -exec sh -c 'test -x "$1"' _ {} \; -print | head -n 1)"
 
 if [ -z "${BIN_PATH}" ]; then
-  echo "Binary not found in archive"
+  echo "Executable ${ALIAS_APP_NAME} is not found in the archive ${TMP_DIR}"
   rm -rf "${TMP_DIR}"
   exit 1
 fi
