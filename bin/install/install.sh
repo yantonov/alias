@@ -18,10 +18,10 @@ mkdir -p "${TARGET_DIR}"
 cd "${TARGET_DIR}"
 
 # 3. Download and execute first script with app name
-curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/download.sh" | sh -s -- "${APP_NAME}"
+curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/install/download.sh" | sh -s -- "${APP_NAME}"
 
 # 4. Download and execute second script with target directory
-curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/configure.sh" | sh -s -- "${TARGET_DIR}"
+curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/install/configure.sh" | sh -s -- "${TARGET_DIR}"
 
 # 5. Execute the application to generate default config
 # (Assumes the executable name matches APP_NAME)
