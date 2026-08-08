@@ -2,13 +2,13 @@
 
 # Intro
 
-This app helps you to define custom aliases/commands for a command-line utility that has no alias support,  
-an example of functionality from [git](https://git-scm.com/book/en/v2/Git-Basics-Git-Aliases), another page about git config [section](https://git-scm.com/docs/git-config#Documentation/git-config.txt-alias)).  
+**Git aliases for any command-line program.**
 
-Using this app you can define some aliases/commands/subcommands and use them just like they were defined out of the box.  
-It allows to avoid creating global aliases, shell scripts for additional actions and provide additional contextual actions.  
+Inspired by [git aliases](https://git-scm.com/book/en/v2/Git-Basics-Git-Aliases), `alias` lets you define custom aliases, commands, and subcommands for any CLI — even if the program itself has no alias support.
 
-It is just a decorator around exiting command-line application.
+Your aliases behave like built-in commands, without polluting your shell configuration or requiring separate wrapper scripts.
+
+Technically, `alias` is just a thin wrapper around the target command-line application.
 
 # Table of contents
 1. [Technical notes](#technical-notes)
