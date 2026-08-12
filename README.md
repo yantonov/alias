@@ -23,28 +23,28 @@ Technically, `alias` is just a thin wrapper around the target command-line appli
 10. [Examples](#examples)
 
 ## Technical notes
-Technically is just a thin wrapper(proxy) to conditionally run target program.  
-If alias is found, it is expanded and resolved version is used, otherwise target executable is called using original arguments.
+Technically, it is just a thin wrapper (proxy) that conditionally runs the target program.  
+If an alias is found, it is expanded and the resolved version is used; otherwise, the target executable is called with the original arguments.
 
 This app is independent of
-1. the target program which needs aliases support
-2. operating system
-3. shell/command interpreter
+1. the target program that needs alias support
+2. the operating system
+3. the shell/command interpreter
 
-Configuration settings are stored in a separate config,  
-therefore, you do not need to pollute a global namespace with shell aliases (using .zsh/.bashrc/.profile etc).
+Configuration settings are stored in a separate config file,  
+therefore, you do not need to pollute the global namespace with shell aliases (using .zshrc/.bashrc/.profile, etc.).
 
 ## Installation
 
 ### Manual
-1. Put the executable under PATH, and name it the same as the target program (program without alias support)  
+1. Put the executable in a directory on your PATH, and name it the same as the target program (the program without alias support)  
 You can get prebuilt binaries [here](https://github.com/yantonov/alias/releases)
-2. Write config (config.toml) and put it near the executable  
-(a sample config will be created at the first launch if it does not exist)
-3. Use custom aliases just like if they are supported out of the box.  
+2. Write a config (config.toml) and put it next to the executable  
+(a sample config will be created on the first launch if it does not exist)
+3. Use custom aliases just as if they were supported out of the box.  
 
 ### Automatic
-You can use this snippet to install alias binary using a selected name to ${HOME}/bin/<APP-NAME>-aliases directory, where <APP_NAME> is the name of the app which you want to configure
+You can use this snippet to install the alias binary under a selected name into the ${HOME}/bin/<APP_NAME>-aliases directory, where <APP_NAME> is the name of the app that you want to configure
 ```bash
     curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/install/install.sh" | bash -s -- "<APP_NAME>"
 ```
@@ -104,32 +104,32 @@ tail = "!docker logs -f"     # doubly-nested group
 | `docker container log tail` | `docker logs -f` |
 
 ## List of aliases
-The list of aliases can be shown by using --aliases parameter.
+The list of aliases can be shown by using the --aliases parameter.
 
 ## Override
 You can add an additional configuration file 'override.toml' to the same directory.  
-This helps you to redefine or introduce new aliases which depend on the environment.  
-Motivation: some aliases may be specific to the working environment and you do not want to expose them by sharing using a public repository.
+This helps you to redefine existing aliases or introduce new ones that depend on the environment.  
+Motivation: some aliases may be specific to the working environment, and you do not want to expose them by sharing them in a public repository.
 
 ## Target executable location
 There are two options:  
-1. You can explicitly define the target executable using 'executable' parameter (see the example [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml)).  
-2. Without explicit configuration, the app tries to detect the target executable automatically by trying to find an existing file with the same name later in the PATH.  
-In that case, you have to add this alias application in front of the target executable in terms of the PATH variable.
+1. You can explicitly define the target executable using the 'executable' parameter (see the example [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml)).  
+2. Without explicit configuration, the app tries to detect the target executable automatically by looking for an existing file with the same name later in the PATH.  
+In that case, you have to place this alias application in front of the target executable in the PATH variable.
 
 ## Different operating systems
 Different operating systems place binary files in different directories.  
-To handle this, it is possible to reference target executable using environment variables (example: executable="${HOME}/tools/bin/app")  
+To handle this, it is possible to reference the target executable using environment variables (example: executable="${HOME}/tools/bin/app")  
 This helps you to use the same config file across different operating systems.
 
 ## Shell scripts on Windows
-When you try to use shell script directly as a target executable you can face the problem '%1 is not a valid win32 application'.  
-To deal with this issue you can ann run_as_shell=true parameter to the config (or to the override file if you prefer), this will allows you to run the script using the current shell.
+When you try to use a shell script directly as a target executable, you can face the problem '%1 is not a valid win32 application'.  
+To deal with this issue, you can add the run_as_shell=true parameter to the config (or to the override file if you prefer); this will allow you to run the script using the current shell.
 
 ## Examples
 Sample config can be found [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml).
 
-A little bit more realistic examples:  
+A few more realistic examples:  
 1. [docker aliases](https://github.com/yantonov/docker-aliases)  
 2. [podman aliases](https://github.com/yantonov/podman-aliases)  
 3. [uv aliases](https://github.com/yantonov/uv-aliases)  
