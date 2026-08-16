@@ -1,6 +1,6 @@
 use crate::config::Configuration;
 use crate::environment::Environment;
-use crate::handler::{passthrough, Handler};
+use crate::handler::{passthrough, version_line, Handler};
 
 pub struct HelpHandler {}
 
@@ -8,7 +8,7 @@ impl Handler for HelpHandler {
     fn handle(&self,
               environment: &Environment,
               configuration: &Configuration) {
-        println!("alias v{}", env!("CARGO_PKG_VERSION"));
+        println!("{}", version_line());
         println!();
         println!("A thin wrapper that adds alias support to any command-line tool.");
         println!("Place this executable in PATH under the same name as the target program,");
