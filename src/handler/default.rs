@@ -64,8 +64,23 @@ fn handle_regular_alias(configuration: &Configuration, remaining: &[String], exe
     })
 }
 
+// Arguments left after the alias are appended the way git appends them: they
+// travel to the shell as positional parameters, and the command gets a quoted
+// "$@" so that they reach it whole, an argument containing spaces included.
+// Nothing the user typed is ever concatenated into the command text.
+//
+// A command that gets no arguments is left exactly as written: a trailing
+// "$@" would expand to nothing anyway, while showing up in shell diagnostics
+// and disappearing into a command that happens to end with a comment.
 fn handle_shell_alias(remaining: &[String], shell: &str, shell_command: String) -> Result<CallContext, String> {
-    let mut args = vec!["-c".to_string(), shell_command, "script".to_string()];
+    let command = if remaining.is_empty() {
+        shell_command.clone()
+    } else {
+        format!("{} \"$@\"", shell_command)
+    };
+
+    // $0 is the command itself, so that shell diagnostics name what failed.
+    let mut args = vec!["-c".to_string(), command, shell_command];
     for p in remaining {
         args.push(p.clone());
     }
@@ -117,5 +132,40 @@ impl Handler for DefaultHandler {
 impl DefaultHandler {
     pub fn new() -> DefaultHandler {
         DefaultHandler {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn shell_alias(command: &str, remaining: &[&str]) -> CallContext {
+        let remaining: Vec<String> = remaining.iter().map(|a| a.to_string()).collect();
+        handle_shell_alias(&remaining, "/bin/sh", command.to_string())
+            .expect("a shell alias resolves without a target executable")
+    }
+
+    #[test]
+    fn a_command_without_arguments_is_handed_over_as_written() {
+        let context = shell_alias("echo hi", &[]);
+        assert_eq!("/bin/sh", context.executable);
+        assert_eq!(vec!["-c", "echo hi", "echo hi"], context.args);
+    }
+
+    #[test]
+    fn arguments_reach_the_command_through_a_quoted_parameter_expansion() {
+        let context = shell_alias("echo hi", &["one", "two"]);
+        assert_eq!(vec!["-c", "echo hi \"$@\"", "echo hi", "one", "two"], context.args);
+    }
+
+    // The quotes around $@ are what keeps this one argument rather than two.
+    #[test]
+    fn an_argument_containing_spaces_stays_a_single_argument() {
+        let context = shell_alias("git commit -m", &["work in progress"]);
+        assert_eq!(vec!["-c",
+                        "git commit -m \"$@\"",
+                        "git commit -m",
+                        "work in progress"],
+                   context.args);
     }
 }

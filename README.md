@@ -82,6 +82,18 @@ clean = "!rm -rf *.tmp"
 |---------|------------|
 | `git clean` | `rm -rf *.tmp` |
 
+Whatever follows the alias is appended to the command, the way git appends it to its own shell aliases:
+```toml
+[alias]
+tail = "!docker logs -f"
+```
+| Command | Runs |
+|---------|------|
+| `docker tail web` | `docker logs -f web` |
+
+An argument keeps its spaces, so `docker tail "my container"` passes one argument, not two.  
+Do not write `"$@"` in the alias yourself: it is added when there is something to pass, and writing it as well makes the arguments arrive twice.
+
 ## Alias groups and subcommands
 
 Aliases can be organized into groups using TOML table nesting — or, from the user's perspective, you are defining **custom subcommands**. Both metaphors describe the same thing: a multi-word prefix that routes to a specific alias.
