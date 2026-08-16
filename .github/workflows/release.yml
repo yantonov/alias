@@ -8,23 +8,42 @@ on:
 jobs:
   publish:
     # define multiple targets
-    name: Publish for ${{ matrix.os }}
+    name: Publish ${{ matrix.asset_name }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash
     strategy:
+      fail-fast: false
       matrix:
+        # The architecture in the asset name is spelled the way uname -m
+        # reports it on that very platform, so the installer can build the
+        # name it needs without a lookup table. Note that macos-latest is
+        # arm64: an asset named just 'macos' would not run on an intel mac.
         include:
           - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
             executable: alias
-            asset_name: alias-linux
+            asset_name: alias-linux-x86_64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            executable: alias
+            asset_name: alias-linux-aarch64
           - os: windows-latest
+            target: x86_64-pc-windows-msvc
             executable: alias.exe
-            asset_name: alias-windows
+            asset_name: alias-windows-x86_64
           - os: macos-latest
+            target: aarch64-apple-darwin
             executable: alias
-            asset_name: alias-macos
+            asset_name: alias-macos-arm64
+          # Built on the arm runner as well: the apple toolchain cross compiles
+          # to intel out of the box, and no x86_64 macos runner has to be kept
+          # alive for it.
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            executable: alias
+            asset_name: alias-macos-x86_64
 
     # build
     steps:
@@ -33,9 +52,11 @@ jobs:
 
       - name: enable toolchain
         uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          targets: ${{ matrix.target }}
 
       - name: build
-        run: cargo build --release
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Set enviroment for github-release
         run: |
@@ -45,16 +66,16 @@ jobs:
         uses: master-atul/tar-action@v1.2.0
         with:
           command: c
-          cwd: ./target/release/
+          cwd: ./target/${{ matrix.target }}/release/
           files: |
             ${{ matrix.executable }}
-          outPath: target/release/${{ matrix.asset_name }}-${{ env.RELEASE_TAG }}.tar.gz
+          outPath: target/${{ matrix.target }}/release/${{ matrix.asset_name }}-${{ env.RELEASE_TAG }}.tar.gz
 
       - name: Release
         uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: |
-            target/release/${{ matrix.asset_name }}-${{ env.RELEASE_TAG }}.tar.gz
+            target/${{ matrix.target }}/release/${{ matrix.asset_name }}-${{ env.RELEASE_TAG }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
