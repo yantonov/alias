@@ -19,8 +19,9 @@ Technically, `alias` is just a thin wrapper around the target command-line appli
 6. [Override](#override)
 7. [Target executable location](#target-executable-location)
 8. [Different operating systems](#different-operating-systems)
-9. [Shell scripts on Windows](#shell-scripts-on-windows)
-10. [Examples](#examples)
+9. [Windows: run it from a POSIX shell](#windows-run-it-from-a-posix-shell)
+10. [Shell scripts on Windows](#shell-scripts-on-windows)
+11. [Examples](#examples)
 
 ## Technical notes
 Technically, it is just a thin wrapper (proxy) that conditionally runs the target program.  
@@ -133,6 +134,11 @@ In that case, you have to place this alias application in front of the target ex
 Different operating systems place binary files in different directories.  
 To handle this, it is possible to reference the target executable using environment variables (example: executable="${HOME}/tools/bin/app")  
 This helps you to use the same config file across different operating systems.
+
+## Windows: run it from a POSIX shell
+On Windows the app is meant to be used from a POSIX shell: Git Bash, MSYS2, Cygwin or WSL.  
+It takes the shell to use from the `SHELL` environment variable, which PowerShell and cmd.exe do not set, so it exits with an error there.  
+This is intentional: shell aliases are `sh` commands and would not survive being handed to PowerShell or cmd.exe anyway.
 
 ## Shell scripts on Windows
 When you try to use a shell script directly as a target executable, you can face the problem '%1 is not a valid win32 application'.  

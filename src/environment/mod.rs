@@ -64,7 +64,7 @@ pub fn system_environment() -> Result<Environment, String> {
         .ok_or("cannot get executable parent directory")?
         .to_path_buf();
     let shell = env::var("SHELL")
-        .map_err(|_| "SHELL environment variable is defined".to_string())?;
+        .map_err(|_| "SHELL environment variable is not set: a POSIX shell is required".to_string())?;
     Ok(Environment {
         executable_name,
         executable_dir,
