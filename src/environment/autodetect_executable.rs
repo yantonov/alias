@@ -47,7 +47,7 @@ impl FileSystemWrapper for OsFileSystemWrapper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
     use std::collections::HashMap;
 
     #[derive(Clone)]
@@ -66,7 +66,9 @@ mod tests {
     }
 
     struct TestFileSystemWrapper {
-        path_to_descriptor: HashMap<String, TestFileDescriptor>,
+        // Keyed by PathBuf, not String: Path compares and hashes by components,
+        // so '/bin/alias' and '/bin\alias' are the same key on Windows.
+        path_to_descriptor: HashMap<PathBuf, TestFileDescriptor>,
     }
 
     impl TestFileSystemWrapper {
@@ -77,24 +79,29 @@ mod tests {
         }
 
         pub fn add(&mut self, path: &str, descriptor: &TestFileDescriptor) {
-            self.path_to_descriptor.insert(path.to_string(), (*descriptor).clone());
+            self.path_to_descriptor.insert(PathBuf::from(path), (*descriptor).clone());
         }
     }
 
     impl FileSystemWrapper for TestFileSystemWrapper {
         fn exists(&self, path: &Path) -> bool {
-            self.path_to_descriptor.contains_key(path.to_str().unwrap())
+            self.path_to_descriptor.contains_key(path)
         }
 
         fn is_file(&self, path: &Path) -> bool {
-            self.path_to_descriptor.get(path.to_str().unwrap())
+            self.path_to_descriptor.get(path)
                 .map(|d| d.is_file)
                 .unwrap_or(false)
         }
     }
 
+    // Joins with the platform PATH separator, so the result can be split back
+    // by env::split_paths on any operating system.
     fn make_path(entries: &[&str]) -> String {
-        entries.join(":")
+        env::join_paths(entries)
+            .expect("PATH entry contains the separator character")
+            .into_string()
+            .expect("PATH is not valid UTF-8")
     }
 
     #[test]
@@ -104,7 +111,7 @@ mod tests {
         fs.add("/usr/bin/alias", &TestFileDescriptor::file());
         let path = make_path(&["/bin", "/usr/bin"]);
         let autodetect = autodetect_executable(Path::new("/bin"), "alias", &path, &fs).unwrap();
-        assert_eq!("/usr/bin/alias", autodetect);
+        assert_eq!(Path::new("/usr/bin/alias"), Path::new(&autodetect));
     }
 
     #[test]
@@ -161,6 +168,6 @@ mod tests {
             &path,
             &fs,
         ).unwrap();
-        assert_eq!("/usr/bin/alias", autodetect);
+        assert_eq!(Path::new("/usr/bin/alias"), Path::new(&autodetect));
     }
 }
