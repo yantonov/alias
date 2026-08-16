@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::process::{Command, ExitStatus};
 
 pub struct CallContext {
@@ -65,6 +66,26 @@ pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
     run(&context.executable, &context.args)
 }
 
+// Decides what of a captured run is worth showing to the user.
+//
+// The flag being forwarded may well be one the target knows nothing about
+// (--aliases is ours, not its): the target then complains on stderr and exits
+// non-zero, and that complaint is pure noise right after the wrapper printed
+// its own answer. So stderr is shown only when the target agreed to the flag.
+//
+// Stdout is shown whatever the exit code, because a tool that prints real help
+// and still exits non-zero is common enough to matter, while a tool that has
+// nothing to say prints nothing and the user sees nothing either way.
+fn presentable_output<'a>(stdout: &'a [u8],
+                          stderr: &'a [u8],
+                          code: Option<i32>) -> (Cow<'a, str>, Cow<'a, str>) {
+    let accepted = code == Some(0);
+    (
+        String::from_utf8_lossy(stdout),
+        if accepted { String::from_utf8_lossy(stderr) } else { Cow::Borrowed("") },
+    )
+}
+
 pub fn try_execute_captured(context: &CallContext) -> Result<Option<i32>, String> {
     let output = Command::new(&context.executable)
         .args(&context.args)
@@ -73,15 +94,53 @@ pub fn try_execute_captured(context: &CallContext) -> Result<Option<i32>, String
                              format_command(&context.executable, &context.args), e))?;
 
     let code = exit_code(output.status);
-    if code == Some(0) {
-        print!("{}", String::from_utf8_lossy(&output.stdout));
-        eprint!("{}", String::from_utf8_lossy(&output.stderr));
-    }
+    let (stdout, stderr) = presentable_output(&output.stdout, &output.stderr, code);
+    print!("{}", stdout);
+    eprint!("{}", stderr);
     Ok(code)
 }
 
 pub fn exit(code: Option<i32>) -> ! {
     std::process::exit(code.unwrap_or(-1));
+}
+
+#[cfg(test)]
+mod presentable_output_tests {
+    use super::*;
+
+    fn present(stdout: &str, stderr: &str, code: Option<i32>) -> (String, String) {
+        let (out, err) = presentable_output(stdout.as_bytes(), stderr.as_bytes(), code);
+        (out.into_owned(), err.into_owned())
+    }
+
+    #[test]
+    fn target_that_accepted_the_flag_shows_both_streams() {
+        let (stdout, stderr) = present("usage: git ...", "a warning", Some(0));
+        assert_eq!("usage: git ...", stdout);
+        assert_eq!("a warning", stderr);
+    }
+
+    // The target does not know --aliases: its 'unrecognized option' belongs to
+    // the wrapper's own flag, not to the user, and is dropped.
+    #[test]
+    fn target_that_rejected_the_flag_keeps_stdout_and_drops_stderr() {
+        let (stdout, stderr) = present("", "error: unrecognized option '--aliases'", Some(2));
+        assert_eq!("", stdout);
+        assert_eq!("", stderr);
+    }
+
+    // Help printed on stdout survives an unhelpful exit code.
+    #[test]
+    fn help_printed_with_a_non_zero_exit_code_is_still_shown() {
+        let (stdout, _) = present("usage: tool [options]", "", Some(1));
+        assert_eq!("usage: tool [options]", stdout);
+    }
+
+    #[test]
+    fn silent_target_shows_nothing() {
+        assert_eq!((String::new(), String::new()), present("", "", Some(0)));
+        assert_eq!((String::new(), String::new()), present("", "", None));
+    }
 }
 
 #[cfg(all(test, unix))]
