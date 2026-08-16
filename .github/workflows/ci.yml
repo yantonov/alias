@@ -10,8 +10,16 @@ name: ci
 
 jobs:
   build_and_test:
-    name: Rust project
-    runs-on: ubuntu-latest
+    name: Rust project (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        # on windows-latest this is Git Bash, the shell the tool targets there
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
