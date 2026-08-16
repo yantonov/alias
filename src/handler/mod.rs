@@ -33,11 +33,9 @@ pub fn get_executable(
     }
 }
 
-// Compared after resolution rather than as text: a symlink pointing at the
-// wrapper, a path through a different mount point and the same path spelled
-// another way are all the same file, and executing any of them starts the same
-// endless chain. A path that cannot be resolved is compared as it stands,
-// which is the best that can be said about it.
+// Compared after resolution rather than as text: several paths can name one
+// file — a mount point away, or a symlink — and executing any of them starts
+// the same endless chain.
 fn is_the_wrapper_itself(target: &str, environment: &Environment) -> bool {
     fn resolved(path: &Path) -> PathBuf {
         fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
@@ -56,4 +54,76 @@ pub fn version_line() -> String {
 
 pub trait Handler {
     fn handle(&self, environment: &environment::Environment, configuration: &config::Configuration);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // A path resolves only if it is really there, so the wrapper the tests
+    // compare against is put on disk under the name the environment reports.
+    fn wrapper_in(directory: &Path) -> (Environment, PathBuf) {
+        let environment = Environment::for_testing(directory.to_path_buf());
+        let wrapper = environment.executable_path();
+        fs::write(&wrapper, b"wrapper").expect("a wrapper on disk");
+        (environment, wrapper)
+    }
+
+    fn is_the_wrapper(path: &Path, environment: &Environment) -> bool {
+        is_the_wrapper_itself(
+            path.to_str().expect("a path that is valid UTF-8"),
+            environment,
+        )
+    }
+
+    #[test]
+    fn the_wrapper_reached_by_another_spelling_of_its_path_is_recognized() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let (environment, wrapper) = wrapper_in(directory.path());
+        let detour = directory.path().join("sub");
+        fs::create_dir(&detour).expect("a directory to detour through");
+
+        let spelled_differently = detour.join("..").join(wrapper.file_name().unwrap());
+
+        assert_ne!(
+            wrapper, spelled_differently,
+            "the two have to differ as text, or resolution is not what the test proves"
+        );
+        assert!(is_the_wrapper(&spelled_differently, &environment));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlink_to_the_wrapper_is_the_wrapper() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let (environment, wrapper) = wrapper_in(directory.path());
+        let link = directory.path().join("link");
+        std::os::unix::fs::symlink(&wrapper, &link).expect("a symlink to the wrapper");
+
+        assert!(is_the_wrapper(&link, &environment));
+    }
+
+    #[test]
+    fn another_program_beside_the_wrapper_is_not_the_wrapper() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let (environment, _) = wrapper_in(directory.path());
+        let other = directory.path().join("other");
+        fs::write(&other, b"another program").expect("another program on disk");
+
+        assert!(!is_the_wrapper(&other, &environment));
+    }
+
+    // Neither path is on disk, so neither of them resolves, and the text is all
+    // that is left to go by.
+    #[test]
+    fn a_path_that_cannot_be_resolved_is_compared_as_it_stands() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = Environment::for_testing(directory.path().join("missing"));
+
+        assert!(is_the_wrapper(&environment.executable_path(), &environment));
+        assert!(!is_the_wrapper(
+            &directory.path().join("elsewhere"),
+            &environment
+        ));
+    }
 }
