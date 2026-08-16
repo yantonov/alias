@@ -25,3 +25,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.97.1
       - run: cargo build
       - run: cargo test
+
+  msrv:
+    # keeps rust-version in Cargo.toml honest
+    name: Minimum supported Rust version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - run: cargo build
+      - run: cargo test
