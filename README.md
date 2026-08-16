@@ -49,6 +49,12 @@ You can use this snippet to install the alias binary under a selected name into 
 ```bash
     curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/install/install.sh" | bash -s -- "<APP_NAME>"
 ```
+The installer resolves the latest published release and takes everything from it: the scripts it runs, and the binary they download, which is verified against the checksum published beside it.  
+A specific release can be installed with `ALIAS_VERSION`:
+```bash
+    curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/install/install.sh" | ALIAS_VERSION=0.2.7 bash -s -- "<APP_NAME>"
+```
+The line above still fetches the entry script itself from `master`. To pin that as well, replace `master` in the URL with a release tag.
 
 ## Alias types
 
