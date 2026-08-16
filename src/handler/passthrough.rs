@@ -14,5 +14,5 @@ pub fn try_passthrough(environment: &Environment, configuration: &Configuration,
         args: args.iter().map(|s| s.to_string()).collect(),
     };
 
-    let _ = process::try_execute_captured(&call_context);
+    let _ = process::try_execute_forwarded(&call_context);
 }

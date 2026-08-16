@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::env;
-use std::process::{Command, ExitStatus};
+use std::io::Read;
+use std::process::{Command, ExitStatus, Stdio};
 
 pub struct CallContext {
     pub executable: String,
@@ -114,45 +115,50 @@ pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
     run(context)
 }
 
-// Decides what of a captured run is worth showing to the user.
-//
 // The flag being forwarded may well be one the target knows nothing about
 // (--aliases is ours, not its): the target then complains on stderr and exits
 // non-zero, and that complaint is pure noise right after the wrapper printed
-// its own answer. So stderr is shown only when the target agreed to the flag.
-//
-// Stdout is shown whatever the exit code, because a tool that prints real help
-// and still exits non-zero is common enough to matter, while a tool that has
-// nothing to say prints nothing and the user sees nothing either way.
-fn presentable_output<'a>(
-    stdout: &'a [u8],
-    stderr: &'a [u8],
-    code: Option<i32>,
-) -> (Cow<'a, str>, Cow<'a, str>) {
-    let accepted = code == Some(0);
-    (
-        String::from_utf8_lossy(stdout),
-        if accepted {
-            String::from_utf8_lossy(stderr)
-        } else {
-            Cow::Borrowed("")
-        },
-    )
+// its own answer. So stderr is held back until the exit code says whether the
+// target agreed to the flag.
+fn presentable_stderr(stderr: &[u8], code: Option<i32>) -> Cow<'_, str> {
+    if code == Some(0) {
+        String::from_utf8_lossy(stderr)
+    } else {
+        Cow::Borrowed("")
+    }
 }
 
-pub fn try_execute_captured(context: &CallContext) -> Result<Option<i32>, String> {
-    let output = command(context).output().map_err(|e| {
+// Only stderr is taken aside. Stdout stays the terminal the wrapper was given,
+// so the target sees a tty on it and its help arrives paged and coloured, the
+// way it does when the target is called directly.
+pub fn try_execute_forwarded(context: &CallContext) -> Result<Option<i32>, String> {
+    let mut child = command(context)
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| {
+            format!(
+                "Failed to execute process [{}]. {}",
+                format_command(&context.executable, &context.args),
+                e
+            )
+        })?;
+
+    // Read to the end before waiting: a target with more to say than the pipe
+    // holds would block on a buffer nobody is draining.
+    let mut captured = Vec::new();
+    if let Some(mut stream) = child.stderr.take() {
+        let _ = stream.read_to_end(&mut captured);
+    }
+
+    let code = child.wait().map(exit_code).map_err(|e| {
         format!(
-            "Failed to execute process [{}]. {}",
+            "Failed to wait child process [{}]. {}",
             format_command(&context.executable, &context.args),
             e
         )
     })?;
 
-    let code = exit_code(output.status);
-    let (stdout, stderr) = presentable_output(&output.stdout, &output.stderr, code);
-    print!("{}", stdout);
-    eprint!("{}", stderr);
+    eprint!("{}", presentable_stderr(&captured, code));
     Ok(code)
 }
 
@@ -163,41 +169,32 @@ pub fn exit(code: Option<i32>) -> ! {
 }
 
 #[cfg(test)]
-mod presentable_output_tests {
+mod presentable_stderr_tests {
     use super::*;
 
-    fn present(stdout: &str, stderr: &str, code: Option<i32>) -> (String, String) {
-        let (out, err) = presentable_output(stdout.as_bytes(), stderr.as_bytes(), code);
-        (out.into_owned(), err.into_owned())
+    fn present(stderr: &str, code: Option<i32>) -> String {
+        presentable_stderr(stderr.as_bytes(), code).into_owned()
     }
 
     #[test]
-    fn target_that_accepted_the_flag_shows_both_streams() {
-        let (stdout, stderr) = present("usage: git ...", "a warning", Some(0));
-        assert_eq!("usage: git ...", stdout);
-        assert_eq!("a warning", stderr);
+    fn target_that_accepted_the_flag_shows_what_it_said() {
+        assert_eq!("a warning", present("a warning", Some(0)));
     }
 
     // The target does not know --aliases: its 'unrecognized option' belongs to
     // the wrapper's own flag, not to the user, and is dropped.
     #[test]
-    fn target_that_rejected_the_flag_keeps_stdout_and_drops_stderr() {
-        let (stdout, stderr) = present("", "error: unrecognized option '--aliases'", Some(2));
-        assert_eq!("", stdout);
-        assert_eq!("", stderr);
-    }
-
-    // Help printed on stdout survives an unhelpful exit code.
-    #[test]
-    fn help_printed_with_a_non_zero_exit_code_is_still_shown() {
-        let (stdout, _) = present("usage: tool [options]", "", Some(1));
-        assert_eq!("usage: tool [options]", stdout);
+    fn target_that_rejected_the_flag_has_it_dropped() {
+        assert_eq!(
+            "",
+            present("error: unrecognized option '--aliases'", Some(2))
+        );
     }
 
     #[test]
     fn silent_target_shows_nothing() {
-        assert_eq!((String::new(), String::new()), present("", "", Some(0)));
-        assert_eq!((String::new(), String::new()), present("", "", None));
+        assert_eq!("", present("", Some(0)));
+        assert_eq!("", present("", None));
     }
 }
 
