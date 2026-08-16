@@ -465,6 +465,18 @@ fn every_call_carries_the_level_it_was_made_at() {
     assert_eq!(vec!["5"], stdout_lines(&execute(command)));
 }
 
+#[test]
+fn a_depth_that_is_not_a_number_counts_as_no_nesting() {
+    let wrapper = Wrapper::fronting("[alias]\nco = \"checkout\"", write_nesting_printer);
+
+    let mut command = wrapper.command(&["co"]);
+    command.env("ALIAS_DEPTH", "not-a-number");
+    let output = execute(command);
+
+    assert_eq!(Some(0), output.status.code(), "{}", stderr(&output));
+    assert_eq!(vec!["1"], stdout_lines(&output));
+}
+
 // The backstop: reaching the limit stops the chain instead of leaving it to run
 // until the machine gives up.
 #[test]

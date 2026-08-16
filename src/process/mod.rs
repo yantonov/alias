@@ -28,9 +28,8 @@ fn format_command(executable: &str, args: &[String]) -> String {
 const NESTING: &str = "ALIAS_DEPTH";
 const NESTING_LIMIT: u32 = 16;
 
-// Anything that is not a number is treated as no nesting at all: the variable
-// belongs to the wrapper, and a value it did not write says nothing about how
-// deep the call really is.
+// The variable belongs to the wrapper: a value it did not write says nothing
+// about how deep the call really is.
 fn nesting_level() -> u32 {
     env::var(NESTING)
         .ok()
