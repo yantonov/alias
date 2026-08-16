@@ -1,0 +1,13 @@
+# Commits that touched every line without changing a single behaviour, and that
+# git blame should look straight through.
+#
+# GitHub reads this file on its own. Locally it has to be enabled once:
+#
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Add the full 40 character hash of such a commit below, with a comment saying
+# what it was. Anything else here makes git blame fail with 'invalid object
+# name', so keep it to hashes and comments.
+
+# reformat with rustfmt
+6b48ef6ea29df1c85c944ee2b77825fc71ee21ab

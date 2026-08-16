@@ -24,12 +24,13 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.97.1
         with:
-          # the action installs a minimal toolchain, clippy has to be asked for
-          components: clippy
+          # the action installs a minimal toolchain, these have to be asked for
+          components: clippy, rustfmt
       - run: cargo build
       # linted on every operating system rather than on one: half of the
       # platform specific code is behind cfg and is invisible to the others
       - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo fmt --check
       - run: cargo test
 
   msrv:
