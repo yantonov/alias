@@ -11,11 +11,17 @@ pub fn autodetect_executable(executable_path: &Path,
     // wrapper itself and find the real target executable.
     let start = paths
         .iter()
-        .position(|p| p.as_path() == executable_path)
+        .position(|p| same_directory(p.as_path(), executable_path))
         .map(|i| i + 1)
         .unwrap_or(0);
 
     paths[start..].iter().find_map(|path_item| {
+        // Never report the wrapper itself: running it would make the process
+        // call itself again and again. Only reachable when the lookup above
+        // fails to recognize our own directory (8.3 short names, subst drives).
+        if same_directory(path_item, executable_path) {
+            return None;
+        }
         let target = path_item.join(executable_name);
         if fs.exists(&target) && fs.is_file(&target) {
             target.to_str().map(|s| s.to_string())
@@ -23,6 +29,23 @@ pub fn autodetect_executable(executable_path: &Path,
             None
         }
     })
+}
+
+// Windows and the default macOS filesystem are case-insensitive, so the same
+// directory can appear in PATH spelled differently from what current_exe()
+// reports. Path comparison is case-sensitive, hence the lowercased forms are
+// compared as paths, which keeps separator and trailing-slash handling intact.
+#[cfg(any(windows, target_os = "macos"))]
+fn same_directory(a: &Path, b: &Path) -> bool {
+    fn lowercased(path: &Path) -> std::path::PathBuf {
+        std::path::PathBuf::from(path.to_string_lossy().to_lowercase())
+    }
+    a == b || lowercased(a) == lowercased(b)
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+fn same_directory(a: &Path, b: &Path) -> bool {
+    a == b
 }
 
 pub trait FileSystemWrapper {
@@ -169,5 +192,59 @@ mod tests {
             &fs,
         ).unwrap();
         assert_eq!(Path::new("/usr/bin/alias"), Path::new(&autodetect));
+    }
+
+    #[test]
+    fn same_directory_matches_identical_paths() {
+        assert!(same_directory(Path::new("/usr/bin"), Path::new("/usr/bin")));
+    }
+
+    #[test]
+    fn same_directory_rejects_different_paths() {
+        assert!(!same_directory(Path::new("/usr/bin"), Path::new("/usr/local/bin")));
+    }
+
+    #[cfg(any(windows, target_os = "macos"))]
+    #[test]
+    fn same_directory_ignores_case_on_case_insensitive_filesystems() {
+        assert!(same_directory(Path::new("/Users/bob/BIN"), Path::new("/users/bob/bin")));
+    }
+
+    #[cfg(not(any(windows, target_os = "macos")))]
+    #[test]
+    fn same_directory_keeps_case_on_case_sensitive_filesystems() {
+        assert!(!same_directory(Path::new("/home/bob/BIN"), Path::new("/home/bob/bin")));
+    }
+
+    // Regression test against self-detection, which makes the wrapper execute
+    // itself in an endless chain. Uses the real filesystem, because the point
+    // is the case-insensitive behaviour of the volume itself.
+    #[cfg(any(windows, target_os = "macos"))]
+    #[test]
+    fn wrapper_is_skipped_when_path_entry_case_differs_from_disk() {
+        let dir = tempfile::tempdir().unwrap();
+        let wrapper_dir = dir.path().join("uv-aliases");
+        let real_dir = dir.path().join("real");
+        std::fs::create_dir_all(&wrapper_dir).unwrap();
+        std::fs::create_dir_all(&real_dir).unwrap();
+        std::fs::write(wrapper_dir.join("uv"), b"wrapper").unwrap();
+        std::fs::write(real_dir.join("uv"), b"the real uv").unwrap();
+
+        // The installer prepends the wrapper directory to PATH; here it is
+        // spelled with a different case than the one on disk.
+        let miscased_wrapper_dir = dir.path().join("UV-ALIASES");
+        let path_var = env::join_paths([&miscased_wrapper_dir, &real_dir])
+            .unwrap()
+            .into_string()
+            .unwrap();
+
+        let detected = autodetect_executable(
+            &wrapper_dir,
+            "uv",
+            &path_var,
+            &OsFileSystemWrapper {},
+        ).expect("the real target should have been detected");
+
+        assert_eq!(real_dir.join("uv"), PathBuf::from(detected));
     }
 }
