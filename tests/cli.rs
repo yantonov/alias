@@ -8,8 +8,21 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::{PoisonError, RwLock};
 
 use tempfile::TempDir;
+
+// Writing an executable and spawning one race with each other on linux. Between
+// fork and exec a child inherits every open descriptor, so while one test is
+// still writing its copy of the wrapper, another test's fork holds that
+// descriptor open for writing, and executing the copy fails with ETXTBSY
+// ("Text file busy"). O_CLOEXEC does not help: it closes the descriptor at exec,
+// after the window that matters.
+//
+// Setting the files up therefore takes this lock exclusively, running them
+// shares it: spawns still overlap each other freely, they just never overlap a
+// write.
+static EXECUTABLES: RwLock<()> = RwLock::new(());
 
 struct Wrapper {
     // Kept alive: dropping it removes the directory the wrapper lives in.
@@ -28,6 +41,8 @@ impl Wrapper {
     }
 
     fn new(aliases: &str, write_target: fn(&Path) -> PathBuf) -> Wrapper {
+        let _guard = EXECUTABLES.write().unwrap_or_else(PoisonError::into_inner);
+
         let directory = tempfile::tempdir().expect("a temporary directory");
         let target = write_target(&directory.path().join("target-program"));
 
@@ -45,7 +60,7 @@ impl Wrapper {
     }
 
     fn run(&self, arguments: &[&str]) -> Output {
-        self.command(arguments).output().expect("the wrapper starts")
+        execute(self.command(arguments))
     }
 
     fn command(&self, arguments: &[&str]) -> Command {
@@ -56,6 +71,13 @@ impl Wrapper {
         command.env("SHELL", "/bin/sh");
         command
     }
+}
+
+// Every spawn goes through here, so that no fork happens while an executable is
+// being written. Shared, not exclusive: spawns may overlap each other.
+fn execute(mut command: Command) -> Output {
+    let _guard = EXECUTABLES.read().unwrap_or_else(PoisonError::into_inner);
+    command.output().expect("the wrapper starts")
 }
 
 fn executable_file_name(stem: &str) -> String {
@@ -216,10 +238,9 @@ fn the_wrapper_reports_its_own_version_before_the_version_of_the_target() {
 fn a_missing_shell_is_reported_instead_of_being_guessed() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout\"");
 
-    let output = wrapper.command(&["co"])
-        .env_remove("SHELL")
-        .output()
-        .expect("the wrapper starts");
+    let mut command = wrapper.command(&["co"]);
+    command.env_remove("SHELL");
+    let output = execute(command);
 
     assert_eq!(Some(1), output.status.code());
     assert!(stderr(&output).contains("SHELL environment variable is not set"),
@@ -238,20 +259,22 @@ fn the_config_created_on_the_first_launch_is_read_back_on_the_second() {
     // installer produces and the one autodetection is meant to resolve.
     let name = executable_file_name("frontend");
     let binary = wrapper_directory.path().join(&name);
-    fs::copy(env!("CARGO_BIN_EXE_alias"), &binary).expect("the wrapper binary is copied");
-    fs::copy(env!("CARGO_BIN_EXE_alias"), target_directory.path().join(&name))
-        .expect("a target to be detected");
+    {
+        let _guard = EXECUTABLES.write().unwrap_or_else(PoisonError::into_inner);
+        fs::copy(env!("CARGO_BIN_EXE_alias"), &binary).expect("the wrapper binary is copied");
+        fs::copy(env!("CARGO_BIN_EXE_alias"), target_directory.path().join(&name))
+            .expect("a target to be detected");
+    }
 
     let path = std::env::join_paths([wrapper_directory.path(), target_directory.path()])
         .expect("a PATH out of two directories");
 
     let run = || {
-        Command::new(&binary)
-            .arg("--version")
+        let mut command = Command::new(&binary);
+        command.arg("--version")
             .env("SHELL", "/bin/sh")
-            .env("PATH", &path)
-            .output()
-            .expect("the wrapper starts")
+            .env("PATH", &path);
+        execute(command)
     };
 
     let first = run();
