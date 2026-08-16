@@ -238,16 +238,28 @@ fn merge_values(v1: &Value,
     }
 }
 
+// A detected path is serialized rather than pasted into a quoted string by
+// hand. Windows paths are full of backslashes, and inside a toml basic string
+// those are escapes: most of them are invalid and reject the file outright,
+// while a few are valid and quietly turn part of the path into a control
+// character. Either way the config the app writes for itself is unusable on
+// the very next run.
+fn executable_line(detected: Option<String>) -> String {
+    match detected {
+        Some(path) => format!("executable={}", Value::String(path)),
+        None => "#executable=\"not-found\"".to_string(),
+    }
+}
+
 fn create_config_if_needed(config_file_path: &Path, environment: &Environment) -> Result<(), String> {
     if !config_file_path.exists() {
         let mut f = File::create(config_file_path)
             .map_err(|_| format!("Unable to create {} file", config_file_path.display()))?;
 
-        let auto_detect_executable = environment.try_detect_executable();
+        let executable = executable_line(environment.try_detect_executable());
 
         let sample_config_content = [
-            &auto_detect_executable.map(|x| format!("executable=\"{}\"", x))
-                .unwrap_or("#executable=\"not-found\"".to_string()),
+            &executable,
             "",
             "[alias]",
             "test_alias1=\"--help\""
@@ -532,6 +544,24 @@ mod tests {
             }
             _ => panic!("expected RegularAlias"),
         }
+    }
+
+    #[test]
+    fn detected_windows_path_is_written_as_valid_toml() {
+        // Backslashes, and a space for good measure. '\n' and '\t' are the
+        // dangerous half: pasted into a quoted string by hand they are valid
+        // toml escapes, so the path would parse and come back corrupted.
+        let detected = r"tools\new\target dir\app";
+        let line = executable_line(Some(detected.to_string()));
+        let parsed = line.parse::<Value>().expect("the generated line has to be valid toml");
+        assert_eq!(detected, parsed.get("executable").unwrap().as_str().unwrap());
+    }
+
+    #[test]
+    fn undetected_executable_is_written_as_a_comment() {
+        let line = executable_line(None);
+        assert!(line.starts_with('#'), "expected a commented out line, got: {}", line);
+        assert!(line.parse::<Value>().unwrap().get("executable").is_none());
     }
 
     #[test]
