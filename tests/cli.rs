@@ -369,6 +369,26 @@ fn a_dry_run_prints_the_command_instead_of_running_it() {
     );
 }
 
+#[test]
+fn the_dry_run_variable_counts_as_set_whatever_its_value() {
+    let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
+
+    let mut command = wrapper.command(&["co"]);
+    command.env("ALIAS_DRY_RUN", "0");
+    let printed = stdout(&execute(command));
+
+    assert!(
+        printed.contains("[1] checkout"),
+        "missing from:\n{}",
+        printed
+    );
+    assert!(
+        !printed.lines().any(|line| line == "checkout"),
+        "the target ran after all:\n{}",
+        printed
+    );
+}
+
 // The shell alias path needs no shell for a dry run, so what a shell alias
 // turns into can be checked on every platform, quoted "$@" included.
 #[test]

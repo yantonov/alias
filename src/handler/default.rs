@@ -103,8 +103,8 @@ fn handle_shell_alias(
 // collide with a flag of the target program either.
 const DRY_RUN: &str = "ALIAS_DRY_RUN";
 
-// Set at all counts as on, whatever the value, the way NO_COLOR works. A value
-// meaning 'off' only invites the question of which spellings of it count.
+// A value meaning 'off' only invites the question of which spellings of it
+// count.
 fn dry_run() -> bool {
     env::var_os(DRY_RUN).is_some()
 }
