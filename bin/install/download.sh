@@ -2,7 +2,6 @@
 
 set -eu
 
-SCRIPT="$(basename "$0")"
 cd "$(dirname "$0")"
 
 if [ -z "${1:-}" ]; then
@@ -47,8 +46,6 @@ echo "Downloading: ${DOWNLOAD_URL}"
 
 TMP_DIR="$(mktemp -d)"
 ARCHIVE_PATH="${TMP_DIR}/${ALIAS_APP_NAME}.tar.gz"
-
-echo $ARCHIVE_PATH
 
 # Download archive
 curl -fL "${DOWNLOAD_URL}" -o "${ARCHIVE_PATH}"
