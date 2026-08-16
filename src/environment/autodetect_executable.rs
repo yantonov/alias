@@ -1,10 +1,12 @@
 use std::env;
 use std::path::Path;
 
-pub fn autodetect_executable(executable_path: &Path,
-                             executable_name: &str,
-                             path_var: &str,
-                             fs: &dyn FileSystemWrapper) -> Option<String> {
+pub fn autodetect_executable(
+    executable_path: &Path,
+    executable_name: &str,
+    path_var: &str,
+    fs: &dyn FileSystemWrapper,
+) -> Option<String> {
     let paths: Vec<_> = env::split_paths(path_var).collect();
     let candidates = candidate_names(executable_name);
 
@@ -59,7 +61,10 @@ fn candidate_names(executable_name: &str) -> Vec<String> {
     let mut names = vec![executable_name.to_string()];
     for extension in EXECUTABLE_EXTENSIONS {
         let candidate = format!("{}{}", stem, extension);
-        if !names.iter().any(|name| name.eq_ignore_ascii_case(&candidate)) {
+        if !names
+            .iter()
+            .any(|name| name.eq_ignore_ascii_case(&candidate))
+        {
             names.push(candidate);
         }
     }
@@ -116,8 +121,8 @@ impl FileSystemWrapper for OsFileSystemWrapper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::{Path, PathBuf};
     use std::collections::HashMap;
+    use std::path::{Path, PathBuf};
 
     #[derive(Clone)]
     struct TestFileDescriptor {
@@ -148,7 +153,8 @@ mod tests {
         }
 
         pub fn add(&mut self, path: &str, descriptor: &TestFileDescriptor) {
-            self.path_to_descriptor.insert(PathBuf::from(path), (*descriptor).clone());
+            self.path_to_descriptor
+                .insert(PathBuf::from(path), (*descriptor).clone());
         }
     }
 
@@ -158,7 +164,8 @@ mod tests {
         }
 
         fn is_file(&self, path: &Path) -> bool {
-            self.path_to_descriptor.get(path)
+            self.path_to_descriptor
+                .get(path)
                 .map(|d| d.is_file)
                 .unwrap_or(false)
         }
@@ -173,10 +180,12 @@ mod tests {
             .expect("PATH is not valid UTF-8")
     }
 
-    fn detect(executable_path: &str,
-              executable_name: &str,
-              path_var: &str,
-              fs: &dyn FileSystemWrapper) -> Option<String> {
+    fn detect(
+        executable_path: &str,
+        executable_name: &str,
+        path_var: &str,
+        fs: &dyn FileSystemWrapper,
+    ) -> Option<String> {
         autodetect_executable(Path::new(executable_path), executable_name, path_var, fs)
     }
 
@@ -204,7 +213,10 @@ mod tests {
     #[test]
     fn target_executable_cannot_be_found_later_in_the_path() {
         let mut fs = TestFileSystemWrapper::create();
-        fs.add("/home/username/alias_app/alias", &TestFileDescriptor::file());
+        fs.add(
+            "/home/username/alias_app/alias",
+            &TestFileDescriptor::file(),
+        );
         fs.add("/home/username/some_app/alias", &TestFileDescriptor::file());
         let path = make_path(&[
             "/home/username/some_app",
@@ -313,19 +325,28 @@ mod tests {
 
     #[test]
     fn same_directory_rejects_different_paths() {
-        assert!(!same_directory(Path::new("/usr/bin"), Path::new("/usr/local/bin")));
+        assert!(!same_directory(
+            Path::new("/usr/bin"),
+            Path::new("/usr/local/bin")
+        ));
     }
 
     #[cfg(any(windows, target_os = "macos"))]
     #[test]
     fn same_directory_ignores_case_on_case_insensitive_filesystems() {
-        assert!(same_directory(Path::new("/Users/bob/BIN"), Path::new("/users/bob/bin")));
+        assert!(same_directory(
+            Path::new("/Users/bob/BIN"),
+            Path::new("/users/bob/bin")
+        ));
     }
 
     #[cfg(not(any(windows, target_os = "macos")))]
     #[test]
     fn same_directory_keeps_case_on_case_sensitive_filesystems() {
-        assert!(!same_directory(Path::new("/home/bob/BIN"), Path::new("/home/bob/bin")));
+        assert!(!same_directory(
+            Path::new("/home/bob/BIN"),
+            Path::new("/home/bob/bin")
+        ));
     }
 
     // The fake filesystem cannot express symlinks, and a link in PATH pointing
@@ -350,12 +371,9 @@ mod tests {
             .into_string()
             .unwrap();
 
-        let detected = autodetect_executable(
-            &wrapper_dir,
-            "git",
-            &path_var,
-            &OsFileSystemWrapper {},
-        ).expect("the symlink should have been detected");
+        let detected =
+            autodetect_executable(&wrapper_dir, "git", &path_var, &OsFileSystemWrapper {})
+                .expect("the symlink should have been detected");
 
         assert_eq!(link_dir.join("git"), PathBuf::from(detected));
     }
@@ -382,12 +400,9 @@ mod tests {
             .into_string()
             .unwrap();
 
-        let detected = autodetect_executable(
-            &wrapper_dir,
-            "uv",
-            &path_var,
-            &OsFileSystemWrapper {},
-        ).expect("the real target should have been detected");
+        let detected =
+            autodetect_executable(&wrapper_dir, "uv", &path_var, &OsFileSystemWrapper {})
+                .expect("the real target should have been detected");
 
         assert_eq!(real_dir.join("uv"), PathBuf::from(detected));
     }

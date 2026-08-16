@@ -1,7 +1,7 @@
 use crate::{config, environment};
 
-pub mod default;
 pub mod alias_list;
+pub mod default;
 pub mod error;
 pub mod help;
 pub mod passthrough;
@@ -16,7 +16,5 @@ pub fn version_line() -> String {
 }
 
 pub trait Handler {
-    fn handle(&self,
-              environment: &environment::Environment,
-              configuration: &config::Configuration);
+    fn handle(&self, environment: &environment::Environment, configuration: &config::Configuration);
 }

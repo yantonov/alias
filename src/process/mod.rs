@@ -19,7 +19,9 @@ fn format_command(executable: &str, args: &[String]) -> String {
 #[cfg(unix)]
 fn exit_code(status: ExitStatus) -> Option<i32> {
     use std::os::unix::process::ExitStatusExt;
-    status.code().or_else(|| status.signal().map(|signal| 128 + signal))
+    status
+        .code()
+        .or_else(|| status.signal().map(|signal| 128 + signal))
 }
 
 #[cfg(not(unix))]
@@ -32,34 +34,36 @@ fn exit_code(status: ExitStatus) -> Option<i32> {
 // straight to the target, and its exit status reaches the caller untouched.
 // Returns only when exec itself failed.
 #[cfg(unix)]
-fn run(executable: &str,
-       args: &[String]) -> Result<Option<i32>, String>
-{
+fn run(executable: &str, args: &[String]) -> Result<Option<i32>, String> {
     use std::os::unix::process::CommandExt;
 
-    let error = Command::new(executable)
-        .args(args)
-        .exec();
+    let error = Command::new(executable).args(args).exec();
 
-    Err(format!("Failed to execute process [{}]. {}",
-                format_command(executable, args), error))
+    Err(format!(
+        "Failed to execute process [{}]. {}",
+        format_command(executable, args),
+        error
+    ))
 }
 
 // Windows has no exec, so the target runs as a child process.
 #[cfg(not(unix))]
-fn run(executable: &str,
-       args: &[String]) -> Result<Option<i32>, String>
-{
-    let mut output = Command::new(executable)
-        .args(args)
-        .spawn()
-        .map_err(|e| format!("Failed to execute process [{}]. {}",
-                             format_command(executable, args), e))?;
+fn run(executable: &str, args: &[String]) -> Result<Option<i32>, String> {
+    let mut output = Command::new(executable).args(args).spawn().map_err(|e| {
+        format!(
+            "Failed to execute process [{}]. {}",
+            format_command(executable, args),
+            e
+        )
+    })?;
 
-    output.wait()
-        .map(exit_code)
-        .map_err(|e| format!("Failed to wait child process [{}]. {}",
-                             format_command(executable, args), e))
+    output.wait().map(exit_code).map_err(|e| {
+        format!(
+            "Failed to wait child process [{}]. {}",
+            format_command(executable, args),
+            e
+        )
+    })
 }
 
 pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
@@ -76,13 +80,19 @@ pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
 // Stdout is shown whatever the exit code, because a tool that prints real help
 // and still exits non-zero is common enough to matter, while a tool that has
 // nothing to say prints nothing and the user sees nothing either way.
-fn presentable_output<'a>(stdout: &'a [u8],
-                          stderr: &'a [u8],
-                          code: Option<i32>) -> (Cow<'a, str>, Cow<'a, str>) {
+fn presentable_output<'a>(
+    stdout: &'a [u8],
+    stderr: &'a [u8],
+    code: Option<i32>,
+) -> (Cow<'a, str>, Cow<'a, str>) {
     let accepted = code == Some(0);
     (
         String::from_utf8_lossy(stdout),
-        if accepted { String::from_utf8_lossy(stderr) } else { Cow::Borrowed("") },
+        if accepted {
+            String::from_utf8_lossy(stderr)
+        } else {
+            Cow::Borrowed("")
+        },
     )
 }
 
@@ -90,8 +100,13 @@ pub fn try_execute_captured(context: &CallContext) -> Result<Option<i32>, String
     let output = Command::new(&context.executable)
         .args(&context.args)
         .output()
-        .map_err(|e| format!("Failed to execute process [{}]. {}",
-                             format_command(&context.executable, &context.args), e))?;
+        .map_err(|e| {
+            format!(
+                "Failed to execute process [{}]. {}",
+                format_command(&context.executable, &context.args),
+                e
+            )
+        })?;
 
     let code = exit_code(output.status);
     let (stdout, stderr) = presentable_output(&output.stdout, &output.stderr, code);

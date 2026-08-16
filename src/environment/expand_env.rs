@@ -46,16 +46,17 @@ mod tests {
     #[test]
     fn expand_existing_var() {
         unsafe {
-                env::set_var("ENV_VAR", "yes");
+            env::set_var("ENV_VAR", "yes");
         }
-        assert_eq!("yes/replaced",
-                   expand_env_var("${ENV_VAR}/replaced"));
+        assert_eq!("yes/replaced", expand_env_var("${ENV_VAR}/replaced"));
     }
 
     #[test]
     fn not_existing_var_wait_unmodified_string() {
-        assert_eq!("${NOT_EXISTING_VAR}/not_replaced",
-                   expand_env_var("${NOT_EXISTING_VAR}/not_replaced"));
+        assert_eq!(
+            "${NOT_EXISTING_VAR}/not_replaced",
+            expand_env_var("${NOT_EXISTING_VAR}/not_replaced")
+        );
     }
 
     #[test]
@@ -64,7 +65,10 @@ mod tests {
             env::set_var("EXPAND_MULTI_A", "foo");
             env::set_var("EXPAND_MULTI_B", "bar");
         }
-        assert_eq!("foo/bar", expand_env_var("${EXPAND_MULTI_A}/${EXPAND_MULTI_B}"));
+        assert_eq!(
+            "foo/bar",
+            expand_env_var("${EXPAND_MULTI_A}/${EXPAND_MULTI_B}")
+        );
     }
 
     #[test]
@@ -73,7 +77,10 @@ mod tests {
             env::set_var("EXPAND_ADJ_A", "hello");
             env::set_var("EXPAND_ADJ_B", "world");
         }
-        assert_eq!("helloworld", expand_env_var("${EXPAND_ADJ_A}${EXPAND_ADJ_B}"));
+        assert_eq!(
+            "helloworld",
+            expand_env_var("${EXPAND_ADJ_A}${EXPAND_ADJ_B}")
+        );
     }
 
     #[test]
@@ -123,6 +130,9 @@ mod tests {
         unsafe {
             env::set_var("EXPAND_SURROUNDED", "mid");
         }
-        assert_eq!("pre/mid/post", expand_env_var("pre/${EXPAND_SURROUNDED}/post"));
+        assert_eq!(
+            "pre/mid/post",
+            expand_env_var("pre/${EXPAND_SURROUNDED}/post")
+        );
     }
 }

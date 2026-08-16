@@ -1,15 +1,19 @@
 use crate::config::Alias::{RegularAlias, ShellAlias};
 use crate::config::Configuration;
-use crate::environment::{expand_env, Environment};
+use crate::environment::{Environment, expand_env};
 use crate::handler::Handler;
 use crate::process::CallContext;
 use crate::{config, environment, process};
 
-fn get_call_context(environment: &Environment,
-                    configuration: &Configuration) -> Result<CallContext, String> {
+fn get_call_context(
+    environment: &Environment,
+    configuration: &Configuration,
+) -> Result<CallContext, String> {
     let call_arguments = environment.call_arguments();
-    let executable = get_executable(environment, configuration)?
-        .ok_or(format!("Cannot autodetect executable: {}", environment.executable_name()))?;
+    let executable = get_executable(environment, configuration)?.ok_or(format!(
+        "Cannot autodetect executable: {}",
+        environment.executable_name()
+    ))?;
     let shell = environment.shell();
 
     match configuration.resolve_alias(call_arguments)? {
@@ -17,20 +21,33 @@ fn get_call_context(environment: &Environment,
             let remaining = &call_arguments[consumed..];
             match alias {
                 ShellAlias(cmd) => handle_shell_alias(remaining, shell, cmd),
-                RegularAlias(alias_args) => handle_regular_alias(configuration, remaining, &executable, shell, alias_args),
+                RegularAlias(alias_args) => {
+                    handle_regular_alias(configuration, remaining, &executable, shell, alias_args)
+                }
             }
         }
-        None => forward_call_to_target_application(configuration, call_arguments, executable, shell),
+        None => {
+            forward_call_to_target_application(configuration, call_arguments, executable, shell)
+        }
     }
 }
 
-fn get_executable(environment: &Environment, configuration: &Configuration) -> Result<Option<String>, String> {
-    Ok(configuration.get_executable()?
+fn get_executable(
+    environment: &Environment,
+    configuration: &Configuration,
+) -> Result<Option<String>, String> {
+    Ok(configuration
+        .get_executable()?
         .map(|config| expand_env::expand_env_var(&config))
         .or_else(|| environment.try_detect_executable()))
 }
 
-fn forward_call_to_target_application(configuration: &Configuration, call_arguments: &[String], executable: String, shell: &str) -> Result<CallContext, String> {
+fn forward_call_to_target_application(
+    configuration: &Configuration,
+    call_arguments: &[String],
+    executable: String,
+    shell: &str,
+) -> Result<CallContext, String> {
     let mut args = Vec::new();
     let run_as_shell = run_as_shell(configuration)?;
     if run_as_shell {
@@ -41,12 +58,22 @@ fn forward_call_to_target_application(configuration: &Configuration, call_argume
     }
 
     Ok(CallContext {
-        executable: if run_as_shell { shell.to_string() } else { executable },
+        executable: if run_as_shell {
+            shell.to_string()
+        } else {
+            executable
+        },
         args,
     })
 }
 
-fn handle_regular_alias(configuration: &Configuration, remaining: &[String], executable: &str, shell: &str, alias_arguments: Vec<String>) -> Result<CallContext, String> {
+fn handle_regular_alias(
+    configuration: &Configuration,
+    remaining: &[String],
+    executable: &str,
+    shell: &str,
+    alias_arguments: Vec<String>,
+) -> Result<CallContext, String> {
     let mut args = Vec::new();
     let run_as_shell = run_as_shell(configuration)?;
     if run_as_shell {
@@ -59,7 +86,11 @@ fn handle_regular_alias(configuration: &Configuration, remaining: &[String], exe
         args.push(p.to_string());
     }
     Ok(CallContext {
-        executable: if run_as_shell { shell.to_string() } else { executable.to_string() },
+        executable: if run_as_shell {
+            shell.to_string()
+        } else {
+            executable.to_string()
+        },
         args,
     })
 }
@@ -72,7 +103,11 @@ fn handle_regular_alias(configuration: &Configuration, remaining: &[String], exe
 // A command that gets no arguments is left exactly as written: a trailing
 // "$@" would expand to nothing anyway, while showing up in shell diagnostics
 // and disappearing into a command that happens to end with a comment.
-fn handle_shell_alias(remaining: &[String], shell: &str, shell_command: String) -> Result<CallContext, String> {
+fn handle_shell_alias(
+    remaining: &[String],
+    shell: &str,
+    shell_command: String,
+) -> Result<CallContext, String> {
     let command = if remaining.is_empty() {
         shell_command.clone()
     } else {
@@ -93,25 +128,20 @@ fn handle_shell_alias(remaining: &[String], shell: &str, shell_command: String) 
 fn run_as_shell(configuration: &Configuration) -> Result<bool, String> {
     match configuration.get_run_as_shell()? {
         None => Ok(false),
-        Some(as_shell) => {
-            Ok(as_shell)
-        }
+        Some(as_shell) => Ok(as_shell),
     }
 }
 
-fn execute(environment: &environment::Environment,
-           configuration: &config::Configuration) {
+fn execute(environment: &environment::Environment, configuration: &config::Configuration) {
     let call_context_result = get_call_context(environment, configuration);
     match call_context_result {
-        Ok(call_context) => {
-            match process::execute(&call_context) {
-                Ok(code) => process::exit(code),
-                Err(error) => {
-                    eprintln!("{}", error);
-                    process::exit(None);
-                }
+        Ok(call_context) => match process::execute(&call_context) {
+            Ok(code) => process::exit(code),
+            Err(error) => {
+                eprintln!("{}", error);
+                process::exit(None);
             }
-        }
+        },
         Err(error) => {
             eprintln!("{}", error);
             process::exit(None);
@@ -122,9 +152,7 @@ fn execute(environment: &environment::Environment,
 pub struct DefaultHandler {}
 
 impl Handler for DefaultHandler {
-    fn handle(&self,
-              environment: &Environment,
-              configuration: &Configuration) {
+    fn handle(&self, environment: &Environment, configuration: &Configuration) {
         execute(environment, configuration)
     }
 }
@@ -155,17 +183,24 @@ mod tests {
     #[test]
     fn arguments_reach_the_command_through_a_quoted_parameter_expansion() {
         let context = shell_alias("echo hi", &["one", "two"]);
-        assert_eq!(vec!["-c", "echo hi \"$@\"", "echo hi", "one", "two"], context.args);
+        assert_eq!(
+            vec!["-c", "echo hi \"$@\"", "echo hi", "one", "two"],
+            context.args
+        );
     }
 
     // The quotes around $@ are what keeps this one argument rather than two.
     #[test]
     fn an_argument_containing_spaces_stays_a_single_argument() {
         let context = shell_alias("git commit -m", &["work in progress"]);
-        assert_eq!(vec!["-c",
-                        "git commit -m \"$@\"",
-                        "git commit -m",
-                        "work in progress"],
-                   context.args);
+        assert_eq!(
+            vec![
+                "-c",
+                "git commit -m \"$@\"",
+                "git commit -m",
+                "work in progress"
+            ],
+            context.args
+        );
     }
 }

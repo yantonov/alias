@@ -1,10 +1,10 @@
+use config::empty_configuration;
+use handler::Handler;
 use handler::alias_list::AliasListHandler;
 use handler::default::DefaultHandler;
 use handler::error::ErrorHandler;
 use handler::help::HelpHandler;
 use handler::version::VersionHandler;
-use handler::Handler;
-use config::empty_configuration;
 
 mod config;
 mod environment;
@@ -45,12 +45,10 @@ fn main() {
 
     match configuration {
         Ok(config) => {
-            get_handler(&environment)
-                .handle(&environment, &config);
+            get_handler(&environment).handle(&environment, &config);
         }
         Err(e) => {
-            ErrorHandler::new(e)
-                .handle(&environment, &empty_configuration());
+            ErrorHandler::new(e).handle(&environment, &empty_configuration());
         }
     }
 }

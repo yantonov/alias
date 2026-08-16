@@ -3,13 +3,11 @@ use crate::environment::Environment;
 use crate::handler::Handler;
 
 pub struct ErrorHandler {
-    error_message: String
+    error_message: String,
 }
 
 impl Handler for ErrorHandler {
-    fn handle(&self,
-              _environment: &Environment,
-              _configuration: &Configuration) {
+    fn handle(&self, _environment: &Environment, _configuration: &Configuration) {
         eprintln!("{}", self.error_message);
         std::process::exit(1);
     }

@@ -51,12 +51,17 @@ impl Wrapper {
         let binary = directory.path().join(executable_file_name("frontend"));
         fs::copy(env!("CARGO_BIN_EXE_alias"), &binary).expect("the wrapper binary is copied");
 
-        let config = format!("executable={}\n\n{}\n",
-                             as_toml_string(&target.display().to_string()),
-                             aliases);
+        let config = format!(
+            "executable={}\n\n{}\n",
+            as_toml_string(&target.display().to_string()),
+            aliases
+        );
         fs::write(directory.path().join("config.toml"), config).expect("a config beside it");
 
-        Wrapper { _directory: directory, binary }
+        Wrapper {
+            _directory: directory,
+            binary,
+        }
     }
 
     fn run(&self, arguments: &[&str]) -> Output {
@@ -81,7 +86,11 @@ fn execute(mut command: Command) -> Output {
 }
 
 fn executable_file_name(stem: &str) -> String {
-    if cfg!(windows) { format!("{}.exe", stem) } else { stem.to_string() }
+    if cfg!(windows) {
+        format!("{}.exe", stem)
+    } else {
+        stem.to_string()
+    }
 }
 
 // Windows paths are full of backslashes, which a toml basic string reads as
@@ -111,20 +120,26 @@ fn stderr(output: &Output) -> String {
 #[cfg(windows)]
 fn write_argv_printer(path: &Path) -> PathBuf {
     let target = path.with_extension("cmd");
-    fs::write(&target,
-              "@echo off\r\n\
+    fs::write(
+        &target,
+        "@echo off\r\n\
                :loop\r\n\
                if \"%~1\"==\"\" goto end\r\n\
                echo %~1\r\n\
                shift\r\n\
                goto loop\r\n\
-               :end\r\n").expect("a target program");
+               :end\r\n",
+    )
+    .expect("a target program");
     target
 }
 
 #[cfg(unix)]
 fn write_argv_printer(path: &Path) -> PathBuf {
-    write_script(path, "for argument in \"$@\"; do echo \"$argument\"; done\n")
+    write_script(
+        path,
+        "for argument in \"$@\"; do echo \"$argument\"; done\n",
+    )
 }
 
 #[cfg(windows)]
@@ -166,7 +181,10 @@ fn a_quoted_part_of_an_alias_arrives_as_a_single_argument() {
 
     let output = wrapper.run(&["ci"]);
 
-    assert_eq!(vec!["commit", "-m", "work in progress"], stdout_lines(&output));
+    assert_eq!(
+        vec!["commit", "-m", "work in progress"],
+        stdout_lines(&output)
+    );
 }
 
 #[test]
@@ -209,14 +227,27 @@ fn the_exit_code_of_the_target_is_the_exit_code_of_the_wrapper() {
 #[test]
 fn configured_aliases_are_listed() {
     let wrapper = Wrapper::fronting_argv_printer(
-        "[alias]\nco = \"checkout main\"\n\n[alias.docker]\nps = \"container ls\"");
+        "[alias]\nco = \"checkout main\"\n\n[alias.docker]\nps = \"container ls\"",
+    );
 
     let output = wrapper.run(&["--aliases"]);
     let listing = stdout(&output);
 
-    assert!(listing.contains("co = checkout main"), "flat alias missing from:\n{}", listing);
-    assert!(listing.contains("docker:"), "group missing from:\n{}", listing);
-    assert!(listing.contains("ps = container ls"), "group member missing from:\n{}", listing);
+    assert!(
+        listing.contains("co = checkout main"),
+        "flat alias missing from:\n{}",
+        listing
+    );
+    assert!(
+        listing.contains("docker:"),
+        "group missing from:\n{}",
+        listing
+    );
+    assert!(
+        listing.contains("ps = container ls"),
+        "group member missing from:\n{}",
+        listing
+    );
 }
 
 #[test]
@@ -226,7 +257,10 @@ fn the_wrapper_reports_its_own_version_before_the_version_of_the_target() {
     let output = wrapper.run(&["--version"]);
     let printed = stdout_lines(&output);
 
-    assert_eq!(format!("alias wrapper version {}", env!("CARGO_PKG_VERSION")), printed[0]);
+    assert_eq!(
+        format!("alias wrapper version {}", env!("CARGO_PKG_VERSION")),
+        printed[0]
+    );
     // What follows is the target's answer to --version, forwarded verbatim.
     assert_eq!(Some(&"--version".to_string()), printed.get(1));
 }
@@ -243,8 +277,11 @@ fn a_missing_shell_is_reported_instead_of_being_guessed() {
     let output = execute(command);
 
     assert_eq!(Some(1), output.status.code());
-    assert!(stderr(&output).contains("SHELL environment variable is not set"),
-            "unexpected error: {}", stderr(&output));
+    assert!(
+        stderr(&output).contains("SHELL environment variable is not set"),
+        "unexpected error: {}",
+        stderr(&output)
+    );
 }
 
 // The config written on the first launch has to be one the app can read on the
@@ -262,8 +299,11 @@ fn the_config_created_on_the_first_launch_is_read_back_on_the_second() {
     {
         let _guard = EXECUTABLES.write().unwrap_or_else(PoisonError::into_inner);
         fs::copy(env!("CARGO_BIN_EXE_alias"), &binary).expect("the wrapper binary is copied");
-        fs::copy(env!("CARGO_BIN_EXE_alias"), target_directory.path().join(&name))
-            .expect("a target to be detected");
+        fs::copy(
+            env!("CARGO_BIN_EXE_alias"),
+            target_directory.path().join(&name),
+        )
+        .expect("a target to be detected");
     }
 
     let path = std::env::join_paths([wrapper_directory.path(), target_directory.path()])
@@ -271,24 +311,41 @@ fn the_config_created_on_the_first_launch_is_read_back_on_the_second() {
 
     let run = || {
         let mut command = Command::new(&binary);
-        command.arg("--version")
+        command
+            .arg("--version")
             .env("SHELL", "/bin/sh")
             .env("PATH", &path);
         execute(command)
     };
 
     let first = run();
-    assert_eq!(Some(0), first.status.code(), "first launch failed: {}", stderr(&first));
+    assert_eq!(
+        Some(0),
+        first.status.code(),
+        "first launch failed: {}",
+        stderr(&first)
+    );
 
     let created = fs::read_to_string(wrapper_directory.path().join("config.toml"))
         .expect("the first launch creates a config");
-    assert!(created.contains(&name),
-            "the detected target should be in the config:\n{}", created);
+    assert!(
+        created.contains(&name),
+        "the detected target should be in the config:\n{}",
+        created
+    );
 
     let second = run();
-    assert!(!stderr(&second).contains("Cannot parse config file"),
-            "the generated config does not parse:\n{}", stderr(&second));
-    assert_eq!(Some(0), second.status.code(), "second launch failed: {}", stderr(&second));
+    assert!(
+        !stderr(&second).contains("Cannot parse config file"),
+        "the generated config does not parse:\n{}",
+        stderr(&second)
+    );
+    assert_eq!(
+        Some(0),
+        second.status.code(),
+        "second launch failed: {}",
+        stderr(&second)
+    );
 }
 
 // Shell aliases need a real POSIX shell, which is not something windows has by

@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use toml::map::Map;
 
 use crate::environment::Environment;
-use toml::value::Value::Table;
 use toml::Value;
+use toml::value::Value::Table;
 
 pub struct Configuration {
     config: Value,
@@ -22,7 +22,11 @@ pub enum AliasNode {
     Group(Vec<(String, AliasNode)>),
 }
 
-fn resolve_in_table(table: &Map<String, Value>, args: &[String], consumed: usize) -> Result<Option<(Alias, usize)>, String> {
+fn resolve_in_table(
+    table: &Map<String, Value>,
+    args: &[String],
+    consumed: usize,
+) -> Result<Option<(Alias, usize)>, String> {
     if args.is_empty() {
         return Ok(None);
     }
@@ -30,8 +34,8 @@ fn resolve_in_table(table: &Map<String, Value>, args: &[String], consumed: usize
         None => Ok(None),
         Some(v) => {
             if let Some(s) = v.as_str() {
-                let alias = parse_alias_str(s)
-                    .map_err(|e| format!("bad alias '{}': {}", args[0], e))?;
+                let alias =
+                    parse_alias_str(s).map_err(|e| format!("bad alias '{}': {}", args[0], e))?;
                 Ok(Some((alias, consumed + 1)))
             } else if let Some(t) = v.as_table() {
                 resolve_in_table(t, &args[1..], consumed + 1)
@@ -43,7 +47,8 @@ fn resolve_in_table(table: &Map<String, Value>, args: &[String], consumed: usize
 }
 
 fn build_alias_tree(table: &Map<String, Value>) -> Vec<(String, AliasNode)> {
-    let mut entries: Vec<(String, AliasNode)> = table.iter()
+    let mut entries: Vec<(String, AliasNode)> = table
+        .iter()
         .filter_map(|(k, v)| {
             if let Some(s) = v.as_str() {
                 Some((k.clone(), AliasNode::Leaf(s.to_string())))
@@ -135,7 +140,7 @@ impl Configuration {
 
     fn value_as_boolean(&self, key: &str, value: &Value) -> Result<bool, String> {
         match value {
-            Value::Boolean(bool_value) => { Ok(*bool_value) }
+            Value::Boolean(bool_value) => Ok(*bool_value),
             _ => Err(format!("'{}' key has no boolean type", key)),
         }
     }
@@ -147,9 +152,7 @@ impl Configuration {
                 let as_str = self.value_as_str(key, value)?;
                 Ok(Some(as_str))
             }
-            Err(_) => {
-                Ok(None)
-            }
+            Err(_) => Ok(None),
         }
     }
 
@@ -160,9 +163,7 @@ impl Configuration {
                 let as_str = self.value_as_boolean(key, value)?;
                 Ok(Some(as_str))
             }
-            Err(_) => {
-                Ok(None)
-            }
+            Err(_) => Ok(None),
         }
     }
 
@@ -179,61 +180,43 @@ impl Configuration {
             None => vec![],
         }
     }
-
 }
 
 pub fn get_config_path(executable_dir: &Path) -> PathBuf {
     let config_file_name = "config.toml";
 
-    executable_dir
-        .join(config_file_name)
+    executable_dir.join(config_file_name)
 }
 
 pub fn get_config_override_path(executable_dir: &Path) -> PathBuf {
     let config_file_name = "override.toml";
 
-    executable_dir
-        .join(config_file_name)
+    executable_dir.join(config_file_name)
 }
 
-pub fn merge(config: &Configuration,
-             override_config: &Configuration) -> Configuration {
+pub fn merge(config: &Configuration, override_config: &Configuration) -> Configuration {
     Configuration {
-        config: merge_values(&config.config,
-                             &override_config.config)
+        config: merge_values(&config.config, &override_config.config),
     }
 }
 
-fn merge_values(v1: &Value,
-                v2: &Value) -> Value {
+fn merge_values(v1: &Value, v2: &Value) -> Value {
     match v1 {
-        Table(source_table) => {
-            match v2 {
-                Table(other_table) => {
-                    let mut result = source_table.clone();
-                    for (key, value) in other_table
-                        .iter() {
-                        let new_value = match result.get(key) {
-                            None => {
-                                value.clone()
-                            }
-                            Some(old) => {
-                                merge_values(&old.clone(),
-                                             &value.clone())
-                            }
-                        };
-                        result.insert(key.clone(), new_value);
-                    }
-                    Table(result)
+        Table(source_table) => match v2 {
+            Table(other_table) => {
+                let mut result = source_table.clone();
+                for (key, value) in other_table.iter() {
+                    let new_value = match result.get(key) {
+                        None => value.clone(),
+                        Some(old) => merge_values(&old.clone(), &value.clone()),
+                    };
+                    result.insert(key.clone(), new_value);
                 }
-                _ => {
-                    v1.clone()
-                }
+                Table(result)
             }
-        }
-        _ => {
-            v2.clone()
-        }
+            _ => v1.clone(),
+        },
+        _ => v2.clone(),
     }
 }
 
@@ -250,44 +233,50 @@ fn executable_line(detected: Option<String>) -> String {
     }
 }
 
-fn create_config_if_needed(config_file_path: &Path, environment: &Environment) -> Result<(), String> {
+fn create_config_if_needed(
+    config_file_path: &Path,
+    environment: &Environment,
+) -> Result<(), String> {
     if !config_file_path.exists() {
         let mut f = File::create(config_file_path)
             .map_err(|_| format!("Unable to create {} file", config_file_path.display()))?;
 
         let executable = executable_line(environment.try_detect_executable());
 
-        let sample_config_content = [
-            &executable,
-            "",
-            "[alias]",
-            "test_alias1=\"--help\""
-        ];
+        let sample_config_content = [&executable, "", "[alias]", "test_alias1=\"--help\""];
         for line in &sample_config_content {
-            f.write_all(line.as_bytes()).map_err(|_| "Unable to write data")?;
-            f.write_all("\n".as_bytes()).map_err(|_| "Unable to write data")?;
+            f.write_all(line.as_bytes())
+                .map_err(|_| "Unable to write data")?;
+            f.write_all("\n".as_bytes())
+                .map_err(|_| "Unable to write data")?;
         }
     }
     Ok(())
 }
 
 pub fn read_configuration(config_file_path: &Path) -> Result<Configuration, String> {
-    let contents = fs::read_to_string(config_file_path)
-        .map_err(|_| format!("Something went wrong while reading the config file: {}",
-                             config_file_path.display()))?;
+    let contents = fs::read_to_string(config_file_path).map_err(|_| {
+        format!(
+            "Something went wrong while reading the config file: {}",
+            config_file_path.display()
+        )
+    })?;
 
-    let config = contents
-        .parse::<Value>()
-        .map_err(|e|
-            format!("[ERROR] Cannot parse config file: {}. {}",
-                    config_file_path.display(),
-                    e))?;
+    let config = contents.parse::<Value>().map_err(|e| {
+        format!(
+            "[ERROR] Cannot parse config file: {}. {}",
+            config_file_path.display(),
+            e
+        )
+    })?;
 
     Ok(Configuration { config })
 }
 
 pub fn empty_configuration() -> Configuration {
-    Configuration { config: Table(Map::new()) }
+    Configuration {
+        config: Table(Map::new()),
+    }
 }
 
 pub fn get_configuration(environment: &Environment) -> Result<Configuration, String> {
@@ -314,7 +303,10 @@ mod tests {
     fn get_table(section_name: &str, alias_name: &str, alias_value: &str) -> Value {
         let mut table: Map<String, Value> = Map::new();
         let mut section: Map<String, Value> = Map::new();
-        section.insert(alias_name.to_string(), Value::String(alias_value.to_string()));
+        section.insert(
+            alias_name.to_string(),
+            Value::String(alias_value.to_string()),
+        );
         table.insert(section_name.to_string(), Table(section));
         Table(table)
     }
@@ -371,7 +363,10 @@ mod tests {
     #[test]
     fn resolve_alias_finds_one_level_group_alias() {
         let config = parse_config("[alias.docker]\nps = \"container ls\"");
-        match config.resolve_alias(&["docker".to_string(), "ps".to_string()]).unwrap() {
+        match config
+            .resolve_alias(&["docker".to_string(), "ps".to_string()])
+            .unwrap()
+        {
             Some((Alias::RegularAlias(args), consumed)) => {
                 assert_eq!(args, vec!["container", "ls"]);
                 assert_eq!(consumed, 2);
@@ -383,7 +378,14 @@ mod tests {
     #[test]
     fn resolve_alias_finds_nested_group_alias() {
         let config = parse_config("[alias.docker.container]\nls = \"container ls\"");
-        match config.resolve_alias(&["docker".to_string(), "container".to_string(), "ls".to_string()]).unwrap() {
+        match config
+            .resolve_alias(&[
+                "docker".to_string(),
+                "container".to_string(),
+                "ls".to_string(),
+            ])
+            .unwrap()
+        {
             Some((Alias::RegularAlias(args), consumed)) => {
                 assert_eq!(args, vec!["container", "ls"]);
                 assert_eq!(consumed, 3);
@@ -395,19 +397,36 @@ mod tests {
     #[test]
     fn resolve_alias_returns_none_for_unknown() {
         let config = parse_config("[alias]\nfoo = \"bar\"");
-        assert!(config.resolve_alias(&["unknown".to_string()]).unwrap().is_none());
+        assert!(
+            config
+                .resolve_alias(&["unknown".to_string()])
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
     fn resolve_alias_returns_none_when_args_exhausted_at_group() {
         let config = parse_config("[alias.docker]\nps = \"container ls\"");
-        assert!(config.resolve_alias(&["docker".to_string()]).unwrap().is_none());
+        assert!(
+            config
+                .resolve_alias(&["docker".to_string()])
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
     fn resolve_alias_shell_alias_at_nested_depth() {
         let config = parse_config("[alias.docker.container]\nclean = \"!docker system prune\"");
-        match config.resolve_alias(&["docker".to_string(), "container".to_string(), "clean".to_string()]).unwrap() {
+        match config
+            .resolve_alias(&[
+                "docker".to_string(),
+                "container".to_string(),
+                "clean".to_string(),
+            ])
+            .unwrap()
+        {
             Some((Alias::ShellAlias(cmd), consumed)) => {
                 assert_eq!(cmd, "docker system prune");
                 assert_eq!(consumed, 3);
@@ -418,7 +437,9 @@ mod tests {
 
     #[test]
     fn list_alias_tree_flat_and_nested() {
-        let config = parse_config("[alias]\nfoo = \"bar\"\n\n[alias.docker.container]\nls = \"container ls\"");
+        let config = parse_config(
+            "[alias]\nfoo = \"bar\"\n\n[alias.docker.container]\nls = \"container ls\"",
+        );
         let tree = config.list_alias_tree();
         assert_eq!(tree.len(), 2);
         assert_eq!(tree[0].0, "docker");
@@ -462,18 +483,27 @@ mod tests {
 
     #[test]
     fn double_quotes_group_an_argument() {
-        assert_eq!(vec!["commit", "-m", "wip message"], split("commit -m \"wip message\""));
+        assert_eq!(
+            vec!["commit", "-m", "wip message"],
+            split("commit -m \"wip message\"")
+        );
     }
 
     #[test]
     fn single_quotes_group_an_argument() {
-        assert_eq!(vec!["commit", "-m", "wip message"], split("commit -m 'wip message'"));
+        assert_eq!(
+            vec!["commit", "-m", "wip message"],
+            split("commit -m 'wip message'")
+        );
     }
 
     #[test]
     fn quotes_of_the_other_kind_are_literal_inside_a_quoted_argument() {
         assert_eq!(vec!["-m", "has\"dq"], split("-m 'has\"dq'"));
-        assert_eq!(vec!["-m", "mixed 'inner' quotes"], split("-m \"mixed 'inner' quotes\""));
+        assert_eq!(
+            vec!["-m", "mixed 'inner' quotes"],
+            split("-m \"mixed 'inner' quotes\"")
+        );
     }
 
     #[test]
@@ -502,16 +532,28 @@ mod tests {
 
     #[test]
     fn trailing_backslash_is_rejected() {
-        assert_eq!(Err("ends with a backslash".to_string()), split_arguments("-m a\\"));
-        assert_eq!(Err("ends with a backslash".to_string()), split_arguments("\\"));
+        assert_eq!(
+            Err("ends with a backslash".to_string()),
+            split_arguments("-m a\\")
+        );
+        assert_eq!(
+            Err("ends with a backslash".to_string()),
+            split_arguments("\\")
+        );
         // inside single quotes a backslash is an ordinary character
         assert_eq!(vec!["a\\"], split("'a\\'"));
     }
 
     #[test]
     fn unclosed_quote_is_rejected() {
-        assert_eq!(Err("unclosed quote".to_string()), split_arguments("-m unbalanced\"quote"));
-        assert_eq!(Err("unclosed quote".to_string()), split_arguments("-m 'still open"));
+        assert_eq!(
+            Err("unclosed quote".to_string()),
+            split_arguments("-m unbalanced\"quote")
+        );
+        assert_eq!(
+            Err("unclosed quote".to_string()),
+            split_arguments("-m 'still open")
+        );
     }
 
     #[test]
@@ -521,8 +563,16 @@ mod tests {
             Err(error) => error,
             Ok(_) => panic!("expected an error for the unclosed quote"),
         };
-        assert!(error.contains("psn"), "error should name the alias: {}", error);
-        assert!(error.contains("unclosed quote"), "error should say why: {}", error);
+        assert!(
+            error.contains("psn"),
+            "error should name the alias: {}",
+            error
+        );
+        assert!(
+            error.contains("unclosed quote"),
+            "error should say why: {}",
+            error
+        );
     }
 
     #[test]
@@ -552,14 +602,23 @@ mod tests {
         // toml escapes, so the path would parse and come back corrupted.
         let detected = r"tools\new\target dir\app";
         let line = executable_line(Some(detected.to_string()));
-        let parsed = line.parse::<Value>().expect("the generated line has to be valid toml");
-        assert_eq!(detected, parsed.get("executable").unwrap().as_str().unwrap());
+        let parsed = line
+            .parse::<Value>()
+            .expect("the generated line has to be valid toml");
+        assert_eq!(
+            detected,
+            parsed.get("executable").unwrap().as_str().unwrap()
+        );
     }
 
     #[test]
     fn undetected_executable_is_written_as_a_comment() {
         let line = executable_line(None);
-        assert!(line.starts_with('#'), "expected a commented out line, got: {}", line);
+        assert!(
+            line.starts_with('#'),
+            "expected a commented out line, got: {}",
+            line
+        );
         assert!(line.parse::<Value>().unwrap().get("executable").is_none());
     }
 
@@ -569,7 +628,10 @@ mod tests {
         let env = Environment::for_testing(dir.path().to_path_buf());
         let result = get_configuration(&env);
         assert!(result.is_ok(), "expected Ok but got: {:?}", result.err());
-        assert!(dir.path().join("config.toml").exists(), "config.toml should have been created");
+        assert!(
+            dir.path().join("config.toml").exists(),
+            "config.toml should have been created"
+        );
     }
 
     #[test]
@@ -578,7 +640,8 @@ mod tests {
         std::fs::write(
             dir.path().join("config.toml"),
             "[alias]\nco = \"checkout main\"\n",
-        ).unwrap();
+        )
+        .unwrap();
         let env = Environment::for_testing(dir.path().to_path_buf());
         let config = get_configuration(&env).unwrap();
         match config.resolve_alias(&["co".to_string()]).unwrap() {
@@ -593,15 +656,23 @@ mod tests {
         std::fs::write(
             dir.path().join("config.toml"),
             "[alias]\nco = \"checkout main\"\n",
-        ).unwrap();
+        )
+        .unwrap();
         std::fs::write(
             dir.path().join("override.toml"),
             "[alias]\nst = \"status\"\n",
-        ).unwrap();
+        )
+        .unwrap();
         let env = Environment::for_testing(dir.path().to_path_buf());
         let config = get_configuration(&env).unwrap();
-        assert!(config.resolve_alias(&["co".to_string()]).unwrap().is_some(), "co from config.toml should be present");
-        assert!(config.resolve_alias(&["st".to_string()]).unwrap().is_some(), "st from override.toml should be present");
+        assert!(
+            config.resolve_alias(&["co".to_string()]).unwrap().is_some(),
+            "co from config.toml should be present"
+        );
+        assert!(
+            config.resolve_alias(&["st".to_string()]).unwrap().is_some(),
+            "st from override.toml should be present"
+        );
     }
 
     #[test]
@@ -610,11 +681,13 @@ mod tests {
         std::fs::write(
             dir.path().join("config.toml"),
             "[alias]\nco = \"checkout main\"\n",
-        ).unwrap();
+        )
+        .unwrap();
         std::fs::write(
             dir.path().join("override.toml"),
             "[alias]\nco = \"checkout develop\"\n",
-        ).unwrap();
+        )
+        .unwrap();
         let env = Environment::for_testing(dir.path().to_path_buf());
         let config = get_configuration(&env).unwrap();
         match config.resolve_alias(&["co".to_string()]).unwrap() {

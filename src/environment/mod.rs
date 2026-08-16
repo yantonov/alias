@@ -1,9 +1,9 @@
+use crate::environment::autodetect_executable::{OsFileSystemWrapper, autodetect_executable};
 use std::env;
-use std::path::{PathBuf};
-use crate::environment::autodetect_executable::{autodetect_executable, OsFileSystemWrapper};
+use std::path::PathBuf;
 
-pub mod expand_env;
 pub mod autodetect_executable;
+pub mod expand_env;
 
 pub struct Environment {
     executable_name: String,
@@ -37,7 +37,8 @@ impl Environment {
             self.executable_dir().as_path(),
             self.executable_name.as_str(),
             &path_var,
-            &OsFileSystemWrapper {})
+            &OsFileSystemWrapper {},
+        )
     }
 }
 
@@ -57,8 +58,7 @@ impl Environment {
 }
 
 pub fn system_environment() -> Result<Environment, String> {
-    let exe = env::current_exe()
-        .map_err(|_| "cannot get current executable".to_string())?;
+    let exe = env::current_exe().map_err(|_| "cannot get current executable".to_string())?;
     let executable_name = exe
         .file_name()
         .and_then(|n| n.to_str())
@@ -68,8 +68,9 @@ pub fn system_environment() -> Result<Environment, String> {
         .parent()
         .ok_or("cannot get executable parent directory")?
         .to_path_buf();
-    let shell = env::var("SHELL")
-        .map_err(|_| "SHELL environment variable is not set: a POSIX shell is required".to_string())?;
+    let shell = env::var("SHELL").map_err(|_| {
+        "SHELL environment variable is not set: a POSIX shell is required".to_string()
+    })?;
     Ok(Environment {
         executable_name,
         executable_dir,
@@ -99,7 +100,11 @@ mod tests {
 
     #[test]
     fn call_arguments_are_empty_without_an_argument() {
-        assert!(environment_with(vec!["git".to_string()]).call_arguments().is_empty());
+        assert!(
+            environment_with(vec!["git".to_string()])
+                .call_arguments()
+                .is_empty()
+        );
     }
 
     #[test]
@@ -107,4 +112,3 @@ mod tests {
         assert!(environment_with(vec![]).call_arguments().is_empty());
     }
 }
-

@@ -1,13 +1,11 @@
 use crate::config::Configuration;
 use crate::environment::Environment;
-use crate::handler::{passthrough, version_line, Handler};
+use crate::handler::{Handler, passthrough, version_line};
 
 pub struct HelpHandler {}
 
 impl Handler for HelpHandler {
-    fn handle(&self,
-              environment: &Environment,
-              configuration: &Configuration) {
+    fn handle(&self, environment: &Environment, configuration: &Configuration) {
         println!("{}", version_line());
         println!();
         println!("A thin wrapper that adds alias support to any command-line tool.");

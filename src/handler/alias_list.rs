@@ -1,6 +1,6 @@
 use crate::config::{AliasNode, Configuration};
 use crate::environment::Environment;
-use crate::handler::{passthrough, Handler};
+use crate::handler::{Handler, passthrough};
 
 fn print_tree(entries: &[(String, AliasNode)], indent: &str) {
     let mut printed = false;
@@ -12,7 +12,9 @@ fn print_tree(entries: &[(String, AliasNode)], indent: &str) {
     }
     for (name, node) in entries {
         if let AliasNode::Group(children) = node {
-            if printed { println!(); }
+            if printed {
+                println!();
+            }
             println!("{}{}:", indent, name);
             print_tree(children, &format!("{}  ", indent));
             printed = true;
@@ -23,9 +25,7 @@ fn print_tree(entries: &[(String, AliasNode)], indent: &str) {
 pub struct AliasListHandler {}
 
 impl Handler for AliasListHandler {
-    fn handle(&self,
-              environment: &Environment,
-              configuration: &Configuration) {
+    fn handle(&self, environment: &Environment, configuration: &Configuration) {
         print_tree(&configuration.list_alias_tree(), "");
         passthrough::try_passthrough(environment, configuration, &["--aliases"]);
     }
