@@ -2,8 +2,8 @@
 
 set -eu
 
-cd "$(dirname "$0")"
-
+# The binary is installed into the current directory: install.sh changes into
+# the target directory before piping this script into a shell.
 if [ -z "${1:-}" ]; then
     echo "application name is not defined"
     echo "Usage: download.sh <app-name>"
