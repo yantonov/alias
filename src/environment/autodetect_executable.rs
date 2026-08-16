@@ -25,9 +25,6 @@ pub fn autodetect_executable(
         if same_directory(path_item, executable_path) {
             return None;
         }
-        // A directory at a time, every candidate within it before moving on,
-        // which is the order windows itself resolves a bare name in: a shim in
-        // the first PATH entry wins over an executable in the fifth.
         candidates.iter().find_map(|candidate| {
             let target = path_item.join(candidate);
             if fs.exists(&target) && fs.is_file(&target) {
@@ -56,8 +53,6 @@ fn candidate_names(executable_name: &str) -> Vec<String> {
         .and_then(|stem| stem.to_str())
         .unwrap_or(executable_name);
 
-    // The name the wrapper carries comes first, so wherever the target is a
-    // plain .exe the search runs exactly as it did before.
     let mut names = vec![executable_name.to_string()];
     for extension in EXECUTABLE_EXTENSIONS {
         let candidate = format!("{}{}", stem, extension);
@@ -251,8 +246,6 @@ mod tests {
         assert_eq!(Path::new("/usr/bin/alias"), Path::new(&autodetect));
     }
 
-    // The wrapper is always an .exe on windows, while the program it fronts
-    // often is not.
     #[cfg(windows)]
     mod executable_extensions {
         use super::*;
@@ -349,9 +342,7 @@ mod tests {
         ));
     }
 
-    // The fake filesystem cannot express symlinks, and a link in PATH pointing
-    // at the real binary is the normal case on macOS, where homebrew installs
-    // every executable that way. Uses the real filesystem for that reason.
+    // Uses the real filesystem: the fake one cannot express symlinks.
     #[cfg(unix)]
     #[test]
     fn symlink_to_the_target_executable_is_detected() {

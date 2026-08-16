@@ -314,11 +314,6 @@ fn a_missing_shell_is_reported_instead_of_being_guessed() {
     );
 }
 
-// SHELL is unset in plenty of ordinary places — a docker container, a systemd
-// unit, cron, a CI step — and none of what runs there needs a shell: a regular
-// alias goes straight to the target, and so does a command that matches no
-// alias at all. Demanding a shell up front made the wrapper useless in all of
-// them.
 #[test]
 fn everything_that_needs_no_shell_runs_without_one() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
@@ -470,9 +465,8 @@ fn every_call_carries_the_level_it_was_made_at() {
     assert_eq!(vec!["5"], stdout_lines(&execute(command)));
 }
 
-// The backstop against a loop of any shape: a shell alias that invokes itself,
-// or two wrappers naming each other. Reaching the limit stops the chain instead
-// of leaving it to run until the machine gives up.
+// The backstop: reaching the limit stops the chain instead of leaving it to run
+// until the machine gives up.
 #[test]
 fn a_call_that_is_already_too_deep_is_refused() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
@@ -526,11 +520,6 @@ fn a_target_that_is_the_wrapper_itself_is_refused() {
     );
 }
 
-// A wrapper is routinely installed into a directory nobody can write to:
-// /usr/local/bin owned by root, an immutable image, the read only nix store.
-// There is no config file there and no way to create one, and forwarding, which
-// needs nothing from the config, has to keep working regardless.
-//
 // Unix only: the read only bit is what makes the case, and windows does not
 // stop a file from being created in a directory marked that way.
 #[cfg(unix)]

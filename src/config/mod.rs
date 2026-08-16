@@ -60,12 +60,9 @@ fn build_alias_tree(table: &Map<String, Value>) -> Vec<(String, AliasNode)> {
     entries
 }
 
-// Splits an alias into arguments the same way git splits its own aliases:
-// runs of whitespace separate arguments, '...' and "..." group text into a
-// single argument, and a backslash takes the next character literally unless
-// it appears inside single quotes. There are no C style escapes: "a\nb" is
-// anb, not a newline. An unterminated quote is an error rather than something
-// quietly handed over to the target program.
+// Splits an alias into arguments the same way git splits its own aliases. The
+// rules are spelled out one per test below; an unterminated quote is an error
+// rather than something quietly handed over to the target program.
 fn split_arguments(value: &str) -> Result<Vec<String>, String> {
     let mut arguments: Vec<String> = Vec::new();
     let mut current = String::new();
@@ -607,9 +604,8 @@ mod tests {
 
     #[test]
     fn detected_windows_path_is_written_as_valid_toml() {
-        // Backslashes, and a space for good measure. '\n' and '\t' are the
-        // dangerous half: pasted into a quoted string by hand they are valid
-        // toml escapes, so the path would parse and come back corrupted.
+        // '\n' and '\t' are deliberate: those two are valid toml escapes, so a
+        // hand quoted path carrying them parses and comes back corrupted.
         let detected = r"tools\new\target dir\app";
         let line = executable_line(Some(detected.to_string()));
         let parsed = line

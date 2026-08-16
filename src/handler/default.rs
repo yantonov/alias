@@ -66,10 +66,9 @@ fn call_the_target(
     })
 }
 
-// Arguments left after the alias are appended the way git appends them: they
-// travel to the shell as positional parameters, and the command gets a quoted
-// "$@" so that they reach it whole, an argument containing spaces included.
-// Nothing the user typed is ever concatenated into the command text.
+// Arguments left after the alias are appended the way git appends them, as
+// positional parameters: nothing the user typed is ever concatenated into the
+// command text.
 //
 // A command that gets no arguments is left exactly as written: a trailing
 // "$@" would expand to nothing anyway, while showing up in shell diagnostics

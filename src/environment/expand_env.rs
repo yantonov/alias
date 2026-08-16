@@ -1,8 +1,8 @@
 use std::env;
 
-// Expands ${NAME} placeholders. A placeholder is '${', a non-empty name that
-// contains no braces, and '}'. Anything that does not fit the shape, and any
-// name that is not set in the environment, is left in place untouched.
+// Expands ${NAME} placeholders. Anything else, a name that is not set in the
+// environment included, is left in place untouched: what counts as a
+// placeholder is spelled out one per test below.
 pub fn expand_env_var(path: &str) -> String {
     let mut result = String::with_capacity(path.len());
     let mut rest = path;

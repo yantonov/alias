@@ -58,9 +58,8 @@ fn command(context: &CallContext) -> Command {
     command
 }
 
-// A child terminated by a signal has no exit code of its own. Report it the way
-// shells do, as 128 + signal number, instead of collapsing it into a failure
-// that is indistinguishable from any other.
+// A child terminated by a signal has no exit code of its own, and collapsing
+// that into a plain failure makes it indistinguishable from any other.
 #[cfg(unix)]
 fn exit_code(status: ExitStatus) -> Option<i32> {
     use std::os::unix::process::ExitStatusExt;
@@ -181,8 +180,6 @@ mod presentable_stderr_tests {
         assert_eq!("a warning", present("a warning", Some(0)));
     }
 
-    // The target does not know --aliases: its 'unrecognized option' belongs to
-    // the wrapper's own flag, not to the user, and is dropped.
     #[test]
     fn target_that_rejected_the_flag_has_it_dropped() {
         assert_eq!(

@@ -27,8 +27,8 @@ impl Environment {
         self.executable_dir.join(&self.executable_name)
     }
 
-    // Everything past the name the wrapper was called by. exec() is free to
-    // hand a process an empty argv, so the tail is taken rather than sliced.
+    // exec() is free to hand a process an empty argv, so the tail is taken
+    // rather than sliced.
     pub fn call_arguments(&self) -> &[String] {
         self.args.get(1..).unwrap_or(&[])
     }
