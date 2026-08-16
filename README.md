@@ -16,12 +16,13 @@ Technically, `alias` is just a thin wrapper around the target command-line appli
 3. [Alias types](#alias-types)
 4. [Alias groups and subcommands](#alias-groups-and-subcommands)
 5. [List of aliases](#list-of-aliases)
-6. [Override](#override)
-7. [Target executable location](#target-executable-location)
-8. [Different operating systems](#different-operating-systems)
-9. [Windows: run it from a POSIX shell](#windows-run-it-from-a-posix-shell)
-10. [Shell scripts on Windows](#shell-scripts-on-windows)
-11. [Examples](#examples)
+6. [Dry run](#dry-run)
+7. [Override](#override)
+8. [Target executable location](#target-executable-location)
+9. [Different operating systems](#different-operating-systems)
+10. [Windows: run it from a POSIX shell](#windows-run-it-from-a-posix-shell)
+11. [Shell scripts on Windows](#shell-scripts-on-windows)
+12. [Examples](#examples)
 
 ## Technical notes
 Technically, it is just a thin wrapper (proxy) that conditionally runs the target program.  
@@ -136,6 +137,45 @@ tail = "!docker logs -f"     # doubly-nested group
 
 ## List of aliases
 The list of aliases can be shown by using the --aliases parameter.
+
+## Dry run
+Set `ALIAS_DRY_RUN` to see what a command expands to. Nothing is executed.
+
+Given this config for a wrapper named `git`:
+```toml
+executable="/usr/bin/git"
+
+[alias]
+ci = 'commit -m "work in progress"'
+today = "!git log --since=midnight --oneline"
+```
+
+a regular alias shows the arguments the target program receives:
+```
+$ ALIAS_DRY_RUN=1 git ci --amend
+dry run: ALIAS_DRY_RUN is set, nothing is executed
+executable: /usr/bin/git
+argv:
+  [1] commit
+  [2] -m
+  [3] work in progress
+  [4] --amend
+```
+`work in progress` is one argument, not three — which is the kind of thing there is otherwise no way to see.
+
+A shell alias shows what the shell is handed. This follows the `sh -c COMMAND [NAME [ARGUMENT...]]` convention: `[2]` is the command that runs, with a `"$@"` appended to it so that the trailing arguments reach it, `[3]` becomes `$0` and only ever shows up in the shell's own error messages, and the rest are the positional parameters:
+```
+$ ALIAS_DRY_RUN=1 git today --author=you
+dry run: ALIAS_DRY_RUN is set, nothing is executed
+executable: /bin/sh
+argv:
+  [1] -c
+  [2] git log --since=midnight --oneline "$@"
+  [3] git log --since=midnight --oneline
+  [4] --author=you
+```
+
+Any value counts as set, and the variable is read on every run, so prefix a single command with it rather than exporting it: an exported one turns every wrapped tool into a no-op.
 
 ## Override
 You can add an additional configuration file 'override.toml' to the same directory.  

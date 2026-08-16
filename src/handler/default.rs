@@ -4,6 +4,7 @@ use crate::environment::{Environment, expand_env};
 use crate::handler::Handler;
 use crate::process::CallContext;
 use crate::{config, environment, process};
+use std::env;
 
 fn get_call_context(
     environment: &Environment,
@@ -125,6 +126,36 @@ fn handle_shell_alias(
     })
 }
 
+// A dry run prints the command that would have been executed and stops.
+//
+// The switch is an environment variable rather than a flag on purpose: the
+// command line then reaches the resolution untouched, so what gets printed is
+// what would have run, rather than a reconstruction of it. No name of ours can
+// collide with a flag of the target program either.
+const DRY_RUN: &str = "ALIAS_DRY_RUN";
+
+// Set at all counts as on, whatever the value, the way NO_COLOR works. A value
+// meaning 'off' only invites the question of which spellings of it count.
+fn dry_run() -> bool {
+    env::var_os(DRY_RUN).is_some()
+}
+
+// One argument per line: joining them with spaces would be ambiguous for the
+// arguments that contain spaces, and those are exactly the ones people come
+// here to look at.
+fn print_call_context(call_context: &CallContext) {
+    println!("dry run: {} is set, nothing is executed", DRY_RUN);
+    println!("executable: {}", call_context.executable);
+    if call_context.args.is_empty() {
+        println!("argv: none");
+    } else {
+        println!("argv:");
+        for (index, argument) in call_context.args.iter().enumerate() {
+            println!("  [{}] {}", index + 1, argument);
+        }
+    }
+}
+
 fn run_as_shell(configuration: &Configuration) -> Result<bool, String> {
     match configuration.get_run_as_shell()? {
         None => Ok(false),
@@ -135,13 +166,22 @@ fn run_as_shell(configuration: &Configuration) -> Result<bool, String> {
 fn execute(environment: &environment::Environment, configuration: &config::Configuration) {
     let call_context_result = get_call_context(environment, configuration);
     match call_context_result {
-        Ok(call_context) => match process::execute(&call_context) {
-            Ok(code) => process::exit(code),
-            Err(error) => {
-                eprintln!("{}", error);
-                process::exit(None);
+        Ok(call_context) => {
+            // Deliberately here and not in process::execute, which also serves
+            // the passthrough behind --help and --aliases: there is nothing to
+            // explain about that one.
+            if dry_run() {
+                print_call_context(&call_context);
+                return;
             }
-        },
+            match process::execute(&call_context) {
+                Ok(code) => process::exit(code),
+                Err(error) => {
+                    eprintln!("{}", error);
+                    process::exit(None);
+                }
+            }
+        }
         Err(error) => {
             eprintln!("{}", error);
             process::exit(None);

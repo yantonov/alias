@@ -21,6 +21,9 @@ impl Handler for HelpHandler {
         println!("    --version    Print version");
         println!("    --help       Print this help message");
         println!();
+        println!("ENVIRONMENT:");
+        println!("    ALIAS_DRY_RUN    Print the command that would run, execute nothing");
+        println!();
         passthrough::try_passthrough(environment, configuration, &["--help"]);
     }
 }

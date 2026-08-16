@@ -284,6 +284,49 @@ fn a_missing_shell_is_reported_instead_of_being_guessed() {
     );
 }
 
+// A dry run has to show the argv the target would have received, and the target
+// has to stay untouched: it would print those arguments bare, one per line.
+#[test]
+fn a_dry_run_prints_the_command_instead_of_running_it() {
+    let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
+
+    let mut command = wrapper.command(&["co", "topic"]);
+    command.env("ALIAS_DRY_RUN", "1");
+    let printed = stdout(&execute(command));
+
+    assert!(
+        printed.contains("[1] checkout"),
+        "missing from:\n{}",
+        printed
+    );
+    assert!(printed.contains("[2] main"), "missing from:\n{}", printed);
+    assert!(printed.contains("[3] topic"), "missing from:\n{}", printed);
+    assert!(
+        !printed.lines().any(|line| line == "checkout"),
+        "the target ran after all:\n{}",
+        printed
+    );
+}
+
+// The shell alias path needs no shell for a dry run, so what a shell alias
+// turns into can be checked on every platform, quoted "$@" included.
+#[test]
+fn a_dry_run_of_a_shell_alias_shows_what_the_shell_would_get() {
+    let wrapper = Wrapper::fronting_argv_printer("[alias]\ntail = \"!docker logs -f\"");
+
+    let mut command = wrapper.command(&["tail", "web"]);
+    command.env("ALIAS_DRY_RUN", "1");
+    let printed = stdout(&execute(command));
+
+    assert!(printed.contains("[1] -c"), "missing from:\n{}", printed);
+    assert!(
+        printed.contains("[2] docker logs -f \"$@\""),
+        "missing from:\n{}",
+        printed
+    );
+    assert!(printed.contains("[4] web"), "missing from:\n{}", printed);
+}
+
 // The config written on the first launch has to be one the app can read on the
 // second, which is not a given: the detected path lands inside it, and on
 // windows such a path is full of backslashes.
