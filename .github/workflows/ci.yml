@@ -21,9 +21,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.97.1
       - run: cargo build
       - run: cargo test

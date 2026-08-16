@@ -29,12 +29,10 @@ jobs:
     # build
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
 
       - name: enable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+        uses: dtolnay/rust-toolchain@1.97.1
 
       - name: build
         run: cargo build --release
@@ -44,7 +42,7 @@ jobs:
           echo "RELEASE_TAG=$( echo ${GITHUB_REF##*/} )" >> $GITHUB_ENV
 
       - name: create archive
-        uses: master-atul/tar-action@v1.0.2
+        uses: master-atul/tar-action@v1.2.0
         with:
           command: c
           cwd: ./target/release/
@@ -53,7 +51,7 @@ jobs:
           outPath: target/release/${{ matrix.asset_name }}-${{ env.RELEASE_TAG }}.tar.gz
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: |
