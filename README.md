@@ -11,31 +11,17 @@ Your aliases behave like built-in commands, without polluting your shell configu
 Technically, `alias` is just a thin wrapper around the target command-line application.
 
 # Table of contents
-1. [Technical notes](#technical-notes)
-2. [Installation](#installation)
-3. [Alias types](#alias-types)
-4. [Alias groups and subcommands](#alias-groups-and-subcommands)
-5. [List of aliases](#list-of-aliases)
-6. [Dry run](#dry-run)
-7. [Override](#override)
-8. [Target executable location](#target-executable-location)
-9. [Endless loops](#endless-loops)
-10. [Different operating systems](#different-operating-systems)
-11. [Windows: shell aliases need a POSIX shell](#windows-shell-aliases-need-a-posix-shell)
-12. [Shell scripts on Windows](#shell-scripts-on-windows)
-13. [Examples](#examples)
-
-## Technical notes
-Technically, it is just a thin wrapper (proxy) that conditionally runs the target program.  
-If an alias is found, it is expanded and the resolved version is used; otherwise, the target executable is called with the original arguments.
-
-This app is independent of
-1. the target program that needs alias support
-2. the operating system
-3. the shell/command interpreter
-
-Configuration settings are stored in a separate config file,  
-therefore, you do not need to pollute the global namespace with shell aliases (using .zshrc/.bashrc/.profile, etc.).
+1. [Installation](#installation)
+2. [Alias types](#alias-types)
+3. [Alias groups and subcommands](#alias-groups-and-subcommands)
+4. [List of aliases](#list-of-aliases)
+5. [Dry run](#dry-run)
+6. [Override](#override)
+7. [Target executable location](#target-executable-location)
+8. [Endless loops](#endless-loops)
+9. [Windows: shell aliases need a POSIX shell](#windows-shell-aliases-need-a-posix-shell)
+10. [Shell scripts on Windows](#shell-scripts-on-windows)
+11. [Examples](#examples)
 
 ## Installation
 
@@ -43,8 +29,7 @@ therefore, you do not need to pollute the global namespace with shell aliases (u
 1. Put the executable in a directory on your PATH, and name it the same as the target program (the program without alias support)  
 You can get prebuilt binaries [here](https://github.com/yantonov/alias/releases)
 2. Write a config (config.toml) and put it next to the executable  
-(a sample config will be created on the first launch if it does not exist)  
-A directory that cannot be written to is fine: nothing is created there, and the wrapper keeps forwarding every command to the target program — it just has no aliases until a config is put in place by hand. `--aliases` says so when that is the case.
+(a sample config will be created on the first launch if it does not exist; in a directory that cannot be written to nothing is created, and `--aliases` says so)
 3. Use custom aliases just as if they were supported out of the box.  
 
 ### Automatic
@@ -52,12 +37,12 @@ You can use this snippet to install the alias binary under a selected name into 
 ```bash
     curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/install/install.sh" | bash -s -- "<APP_NAME>"
 ```
-The installer resolves the latest published release and takes everything from it: the scripts it runs, and the binary they download, which is verified against the checksum published beside it.  
+The downloaded binary is verified against the checksum published beside it.  
 A specific release can be installed with `ALIAS_VERSION`, where `<VERSION>` is the tag of a [published release](https://github.com/yantonov/alias/releases):
 ```bash
     curl -fsSL "https://raw.githubusercontent.com/yantonov/alias/master/bin/install/install.sh" | ALIAS_VERSION=<VERSION> bash -s -- "<APP_NAME>"
 ```
-The line above still fetches the entry script itself from `master`. To pin that as well, replace `master` in the URL with the same tag.
+(the entry script itself still comes from `master`; replace it in the URL with the same tag to pin that as well)
 
 ## Alias types
 
@@ -70,7 +55,7 @@ co = "checkout main"
 |---------|------------|
 | `git co` | `git checkout main` |
 
-Arguments are split the way git splits its own aliases: runs of whitespace separate arguments, `"..."` and `'...'` keep spaces inside a single argument, and a backslash takes the next character literally (except inside single quotes, where it is an ordinary character).  
+Arguments are split the way git splits its own aliases, so `"..."` and `'...'` keep spaces inside a single argument.  
 TOML literal strings keep quoted aliases readable, with no escaping:
 ```toml
 [alias]
@@ -79,8 +64,6 @@ ci = 'commit -m "work in progress"'
 | Command | Arguments passed to the target |
 |---------|--------------------------------|
 | `git ci` | `commit`, `-m`, `work in progress` |
-
-An unterminated quote or a trailing backslash is reported as a configuration error instead of being passed on to the target program.
 
 **Shell alias** — prefixed with `!`, executed by the current shell:
 ```toml
@@ -141,7 +124,7 @@ tail = "!docker logs -f"     # doubly-nested group
 The list of aliases can be shown by using the --aliases parameter.
 
 ## Dry run
-Set `ALIAS_DRY_RUN` to see what a command expands to. Nothing is executed.
+Set `ALIAS_DRY_RUN` to see what a command expands to. Nothing is executed. For a `!` alias it prints the shell invocation rather than the target's arguments.
 
 Given this config for a wrapper named `git`:
 ```toml
@@ -149,7 +132,6 @@ executable="/usr/bin/git"
 
 [alias]
 ci = 'commit -m "work in progress"'
-today = "!git log --since=midnight --oneline"
 ```
 
 a regular alias shows the arguments the target program receives:
@@ -165,18 +147,6 @@ argv:
 ```
 `work in progress` is one argument, not three — which is the kind of thing there is otherwise no way to see.
 
-A shell alias shows what the shell is handed. This follows the `sh -c COMMAND [NAME [ARGUMENT...]]` convention: `[2]` is the command that runs, with a `"$@"` appended to it so that the trailing arguments reach it, `[3]` becomes `$0` and only ever shows up in the shell's own error messages, and the rest are the positional parameters:
-```
-$ ALIAS_DRY_RUN=1 git today --author=you
-dry run: ALIAS_DRY_RUN is set, nothing is executed
-executable: /bin/sh
-argv:
-  [1] -c
-  [2] git log --since=midnight --oneline "$@"
-  [3] git log --since=midnight --oneline
-  [4] --author=you
-```
-
 Any value counts as set, and the variable is read on every run, so prefix a single command with it rather than exporting it: an exported one turns every wrapped tool into a no-op.
 
 ## Override
@@ -190,19 +160,12 @@ There are two options:
 2. Without explicit configuration, the app tries to detect the target executable automatically by looking for an existing file with the same name later in the PATH.  
 In that case, you have to place this alias application in front of the target executable in the PATH variable.
 
+The 'executable' path can reference environment variables (example: executable="${HOME}/tools/bin/app"), which keeps one config file usable across operating systems that put binaries in different directories.
+
 ## Endless loops
-A wrapper that ends up calling itself never stops. There are two ways in, and each is closed differently.
+A wrapper that ends up calling itself never stops. An `executable` entry pointing back at the wrapper, or at a symlink to it, is refused before anything runs. A loop that nothing tells apart from a working config — a shell alias invoking the alias it defines (`st = "!git st"` in a wrapper named `git`), or two wrappers naming each other — is bounded instead: the 16th nested call is refused.
 
-**The target is the wrapper.** An `executable` entry that points back at the wrapper, or at a symlink to it, is refused before anything runs, with the path it resolved to named in the error. This one is easy to write by hand, since the config sits right next to the wrapper.
-
-**Something calls the wrapper back.** A shell alias can invoke the very alias it defines — `st = "!git st"` in a wrapper named `git` — and two wrappers can name each other. Nothing about such a config looks wrong on paper, so it is bounded instead: every call the wrapper makes carries `ALIAS_DEPTH`, and the 16th nested one is refused.
-
-Honest nesting is shallow. A shell alias that names the wrapped program (`tail = "!docker logs -f"` in a wrapper named `docker`) is two levels, and stacking sixteen of them takes deliberate effort. The variable is set by the wrapper for the programs it starts; setting it yourself only lowers that ceiling.
-
-## Different operating systems
-Different operating systems place binary files in different directories.  
-To handle this, it is possible to reference the target executable using environment variables (example: executable="${HOME}/tools/bin/app")  
-This helps you to use the same config file across different operating systems.
+The depth travels in `ALIAS_DEPTH`; setting it yourself only lowers that ceiling.
 
 ## Windows: shell aliases need a POSIX shell
 Shell aliases are `sh` commands, and the shell to run them with is taken from the `SHELL` environment variable.  
