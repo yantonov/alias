@@ -266,13 +266,13 @@ fn the_wrapper_reports_its_own_version_before_the_version_of_the_target() {
 }
 
 // The shell is where aliases prefixed with ! are run, and the app refuses to
-// start without one rather than guessing. This is what a windows user outside
-// git bash runs into.
+// guess one rather than picking a shell of its own. This is what a windows user
+// outside git bash runs into.
 #[test]
 fn a_missing_shell_is_reported_instead_of_being_guessed() {
-    let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout\"");
+    let wrapper = Wrapper::fronting_argv_printer("[alias]\ntail = \"!docker logs -f\"");
 
-    let mut command = wrapper.command(&["co"]);
+    let mut command = wrapper.command(&["tail", "web"]);
     command.env_remove("SHELL");
     let output = execute(command);
 
@@ -282,6 +282,42 @@ fn a_missing_shell_is_reported_instead_of_being_guessed() {
         "unexpected error: {}",
         stderr(&output)
     );
+}
+
+// SHELL is unset in plenty of ordinary places — a docker container, a systemd
+// unit, cron, a CI step — and none of what runs there needs a shell: a regular
+// alias goes straight to the target, and so does a command that matches no
+// alias at all. Demanding a shell up front made the wrapper useless in all of
+// them.
+#[test]
+fn everything_that_needs_no_shell_runs_without_one() {
+    let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
+
+    let expanded = {
+        let mut command = wrapper.command(&["co", "topic"]);
+        command.env_remove("SHELL");
+        execute(command)
+    };
+    assert_eq!(
+        Some(0),
+        expanded.status.code(),
+        "a regular alias needs no shell: {}",
+        stderr(&expanded)
+    );
+    assert_eq!(vec!["checkout", "main", "topic"], stdout_lines(&expanded));
+
+    let forwarded = {
+        let mut command = wrapper.command(&["status", "--short"]);
+        command.env_remove("SHELL");
+        execute(command)
+    };
+    assert_eq!(
+        Some(0),
+        forwarded.status.code(),
+        "a forwarded command needs no shell: {}",
+        stderr(&forwarded)
+    );
+    assert_eq!(vec!["status", "--short"], stdout_lines(&forwarded));
 }
 
 // A dry run has to show the argv the target would have received, and the target

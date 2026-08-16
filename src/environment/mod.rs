@@ -9,7 +9,7 @@ pub struct Environment {
     executable_name: String,
     executable_dir: PathBuf,
     args: Vec<String>,
-    shell: String,
+    shell: Option<String>,
 }
 
 impl Environment {
@@ -27,8 +27,17 @@ impl Environment {
         self.args.get(1..).unwrap_or(&[])
     }
 
-    pub fn shell(&self) -> &str {
-        &self.shell
+    // Asked for at the point of use rather than on startup. A shell is what
+    // runs aliases prefixed with ! and what run_as_shell hands the target to,
+    // and nothing else here has any use for one, while SHELL itself is unset
+    // in plenty of ordinary places: a docker container, a systemd unit, cron,
+    // a CI step, PowerShell. Requiring it up front took the wrapper down in
+    // all of them, forwarding included.
+    pub fn shell(&self) -> Result<&str, String> {
+        self.shell.as_deref().ok_or_else(|| {
+            "SHELL environment variable is not set: a POSIX shell is required by shell aliases and by run_as_shell"
+                .to_string()
+        })
     }
 
     pub fn try_detect_executable(&self) -> Option<String> {
@@ -52,7 +61,7 @@ impl Environment {
             executable_name: "alias-target-that-does-not-exist".to_string(),
             executable_dir,
             args: vec!["test".to_string()],
-            shell: "/bin/sh".to_string(),
+            shell: Some("/bin/sh".to_string()),
         }
     }
 }
@@ -68,14 +77,11 @@ pub fn system_environment() -> Result<Environment, String> {
         .parent()
         .ok_or("cannot get executable parent directory")?
         .to_path_buf();
-    let shell = env::var("SHELL").map_err(|_| {
-        "SHELL environment variable is not set: a POSIX shell is required".to_string()
-    })?;
     Ok(Environment {
         executable_name,
         executable_dir,
         args: env::args().collect(),
-        shell,
+        shell: env::var("SHELL").ok(),
     })
 }
 
@@ -88,8 +94,24 @@ mod tests {
             executable_name: "git".to_string(),
             executable_dir: PathBuf::from("/bin"),
             args,
-            shell: "/bin/sh".to_string(),
+            shell: Some("/bin/sh".to_string()),
         }
+    }
+
+    #[test]
+    fn a_missing_shell_is_reported_only_when_it_is_asked_for() {
+        let environment = Environment {
+            shell: None,
+            ..environment_with(vec!["git".to_string()])
+        };
+        let error = environment
+            .shell()
+            .expect_err("there is no shell to return");
+        assert!(
+            error.contains("SHELL environment variable is not set"),
+            "unexpected error: {}",
+            error
+        );
     }
 
     #[test]

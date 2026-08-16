@@ -15,21 +15,24 @@ fn get_call_context(
         "Cannot autodetect executable: {}",
         environment.executable_name()
     ))?;
-    let shell = environment.shell();
 
     match configuration.resolve_alias(call_arguments)? {
         Some((alias, consumed)) => {
             let remaining = &call_arguments[consumed..];
             match alias {
-                ShellAlias(cmd) => handle_shell_alias(remaining, shell, cmd),
-                RegularAlias(alias_args) => {
-                    handle_regular_alias(configuration, remaining, &executable, shell, alias_args)
+                ShellAlias(cmd) => handle_shell_alias(remaining, environment.shell()?, cmd),
+                RegularAlias(mut arguments) => {
+                    arguments.extend_from_slice(remaining);
+                    call_the_target(configuration, environment, &executable, arguments)
                 }
             }
         }
-        None => {
-            forward_call_to_target_application(configuration, call_arguments, executable, shell)
-        }
+        None => call_the_target(
+            configuration,
+            environment,
+            &executable,
+            call_arguments.to_vec(),
+        ),
     }
 }
 
@@ -43,55 +46,32 @@ fn get_executable(
         .or_else(|| environment.try_detect_executable()))
 }
 
-fn forward_call_to_target_application(
+// Whatever the arguments turned out to be, an expanded alias or the untouched
+// command line, they reach the target the same way: it is started directly, or
+// with run_as_shell it is handed to the shell, which then needs its path as the
+// first argument.
+//
+// This is the only path a shell is looked up on outside of shell aliases, and
+// it is looked up here rather than by the caller: run_as_shell is off by
+// default, and a wrapper that never turns it on must not depend on a shell
+// being nameable at all.
+fn call_the_target(
     configuration: &Configuration,
-    call_arguments: &[String],
-    executable: String,
-    shell: &str,
-) -> Result<CallContext, String> {
-    let mut args = Vec::new();
-    let run_as_shell = run_as_shell(configuration)?;
-    if run_as_shell {
-        args.push(executable.clone());
-    }
-    for p in call_arguments {
-        args.push(p.to_string());
-    }
-
-    Ok(CallContext {
-        executable: if run_as_shell {
-            shell.to_string()
-        } else {
-            executable
-        },
-        args,
-    })
-}
-
-fn handle_regular_alias(
-    configuration: &Configuration,
-    remaining: &[String],
+    environment: &Environment,
     executable: &str,
-    shell: &str,
-    alias_arguments: Vec<String>,
+    arguments: Vec<String>,
 ) -> Result<CallContext, String> {
-    let mut args = Vec::new();
-    let run_as_shell = run_as_shell(configuration)?;
-    if run_as_shell {
-        args.push(executable.to_string());
+    if !run_as_shell(configuration)? {
+        return Ok(CallContext {
+            executable: executable.to_string(),
+            args: arguments,
+        });
     }
-    for a in alias_arguments {
-        args.push(a);
-    }
-    for p in remaining {
-        args.push(p.to_string());
-    }
+
+    let mut args = vec![executable.to_string()];
+    args.extend(arguments);
     Ok(CallContext {
-        executable: if run_as_shell {
-            shell.to_string()
-        } else {
-            executable.to_string()
-        },
+        executable: environment.shell()?.to_string(),
         args,
     })
 }
@@ -182,9 +162,14 @@ fn execute(environment: &environment::Environment, configuration: &config::Confi
                 }
             }
         }
+        // Nothing was run: the wrapper could not work out what to run, because
+        // of a broken alias, an undetectable target or a shell it needs and
+        // cannot name. Its own failures all exit 1, the way a configuration
+        // that does not parse already did, and the missing shell did before it
+        // was moved out of startup.
         Err(error) => {
             eprintln!("{}", error);
-            process::exit(None);
+            process::exit(Some(1));
         }
     }
 }

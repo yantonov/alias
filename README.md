@@ -20,7 +20,7 @@ Technically, `alias` is just a thin wrapper around the target command-line appli
 7. [Override](#override)
 8. [Target executable location](#target-executable-location)
 9. [Different operating systems](#different-operating-systems)
-10. [Windows: run it from a POSIX shell](#windows-run-it-from-a-posix-shell)
+10. [Windows: shell aliases need a POSIX shell](#windows-shell-aliases-need-a-posix-shell)
 11. [Shell scripts on Windows](#shell-scripts-on-windows)
 12. [Examples](#examples)
 
@@ -194,10 +194,11 @@ Different operating systems place binary files in different directories.
 To handle this, it is possible to reference the target executable using environment variables (example: executable="${HOME}/tools/bin/app")  
 This helps you to use the same config file across different operating systems.
 
-## Windows: run it from a POSIX shell
-On Windows the app is meant to be used from a POSIX shell: Git Bash, MSYS2, Cygwin or WSL.  
-It takes the shell to use from the `SHELL` environment variable, which PowerShell and cmd.exe do not set, so it exits with an error there.  
-This is intentional: shell aliases are `sh` commands and would not survive being handed to PowerShell or cmd.exe anyway.
+## Windows: shell aliases need a POSIX shell
+Shell aliases are `sh` commands, and the shell to run them with is taken from the `SHELL` environment variable.  
+On Windows that means a POSIX shell: Git Bash, MSYS2, Cygwin or WSL. PowerShell and cmd.exe do not set `SHELL`, and a shell alias invoked from there is reported as an error rather than handed to a shell it would not survive.  
+Everything else has no use for a shell and works anywhere: regular aliases, groups, and any command that matches no alias and is forwarded to the target program.  
+The same applies to any environment that leaves `SHELL` unset — a container, a systemd unit, a cron job, a CI step.
 
 ## Shell scripts on Windows
 When you try to use a shell script directly as a target executable, you can face the problem '%1 is not a valid win32 application'.  
