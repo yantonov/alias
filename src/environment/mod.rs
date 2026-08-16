@@ -56,6 +56,28 @@ impl Environment {
     }
 }
 
+pub fn system_environment() -> Result<Environment, String> {
+    let exe = env::current_exe()
+        .map_err(|_| "cannot get current executable".to_string())?;
+    let executable_name = exe
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or("cannot extract executable filename")?
+        .to_string();
+    let executable_dir = exe
+        .parent()
+        .ok_or("cannot get executable parent directory")?
+        .to_path_buf();
+    let shell = env::var("SHELL")
+        .map_err(|_| "SHELL environment variable is not set: a POSIX shell is required".to_string())?;
+    Ok(Environment {
+        executable_name,
+        executable_dir,
+        args: env::args().collect(),
+        shell,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,27 +106,5 @@ mod tests {
     fn call_arguments_are_empty_when_argv_is_empty() {
         assert!(environment_with(vec![]).call_arguments().is_empty());
     }
-}
-
-pub fn system_environment() -> Result<Environment, String> {
-    let exe = env::current_exe()
-        .map_err(|_| "cannot get current executable".to_string())?;
-    let executable_name = exe
-        .file_name()
-        .and_then(|n| n.to_str())
-        .ok_or("cannot extract executable filename")?
-        .to_string();
-    let executable_dir = exe
-        .parent()
-        .ok_or("cannot get executable parent directory")?
-        .to_path_buf();
-    let shell = env::var("SHELL")
-        .map_err(|_| "SHELL environment variable is not set: a POSIX shell is required".to_string())?;
-    Ok(Environment {
-        executable_name,
-        executable_dir,
-        args: env::args().collect(),
-        shell,
-    })
 }
 

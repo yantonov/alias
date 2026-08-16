@@ -16,8 +16,8 @@ fn get_call_context(environment: &Environment,
         Some((alias, consumed)) => {
             let remaining = &call_arguments[consumed..];
             match alias {
-                ShellAlias(cmd) => handle_shell_alias(remaining, &shell, cmd),
-                RegularAlias(alias_args) => handle_regular_alias(configuration, remaining, &executable, &shell, alias_args),
+                ShellAlias(cmd) => handle_shell_alias(remaining, shell, cmd),
+                RegularAlias(alias_args) => handle_regular_alias(configuration, remaining, &executable, shell, alias_args),
             }
         }
         None => forward_call_to_target_application(configuration, call_arguments, executable, shell),

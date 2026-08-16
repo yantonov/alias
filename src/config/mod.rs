@@ -47,10 +47,9 @@ fn build_alias_tree(table: &Map<String, Value>) -> Vec<(String, AliasNode)> {
         .filter_map(|(k, v)| {
             if let Some(s) = v.as_str() {
                 Some((k.clone(), AliasNode::Leaf(s.to_string())))
-            } else if let Some(t) = v.as_table() {
-                Some((k.clone(), AliasNode::Group(build_alias_tree(t))))
             } else {
-                None
+                v.as_table()
+                    .map(|t| (k.clone(), AliasNode::Group(build_alias_tree(t))))
             }
         })
         .collect();
@@ -127,14 +126,14 @@ impl Configuration {
         }
     }
 
-    fn value_as_str<'a>(&self, key: &str, value: &'a Value) -> Result<String, String> {
+    fn value_as_str(&self, key: &str, value: &Value) -> Result<String, String> {
         match value.as_str() {
             None => Err(format!("'{}' key has no string type", key)),
             Some(v) => Ok(v.to_string()),
         }
     }
 
-    fn value_as_boolean<'a>(&self, key: &str, value: &'a Value) -> Result<bool, String> {
+    fn value_as_boolean(&self, key: &str, value: &Value) -> Result<bool, String> {
         match value {
             Value::Boolean(bool_value) => { Ok(*bool_value) }
             _ => Err(format!("'{}' key has no boolean type", key)),
@@ -317,7 +316,7 @@ mod tests {
         let mut section: Map<String, Value> = Map::new();
         section.insert(alias_name.to_string(), Value::String(alias_value.to_string()));
         table.insert(section_name.to_string(), Table(section));
-        return Table(table);
+        Table(table)
     }
 
     #[test]
