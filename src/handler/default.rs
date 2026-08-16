@@ -148,7 +148,7 @@ fn execute(environment: &environment::Environment, configuration: &config::Confi
                 Ok(code) => process::exit(code),
                 Err(error) => {
                     eprintln!("{}", error);
-                    process::exit(None);
+                    process::exit(Some(process::COULD_NOT_RUN));
                 }
             }
         }

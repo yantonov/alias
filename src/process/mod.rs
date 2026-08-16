@@ -156,8 +156,10 @@ pub fn try_execute_captured(context: &CallContext) -> Result<Option<i32>, String
     Ok(code)
 }
 
+pub const COULD_NOT_RUN: i32 = 127;
+
 pub fn exit(code: Option<i32>) -> ! {
-    std::process::exit(code.unwrap_or(-1));
+    std::process::exit(code.unwrap_or(COULD_NOT_RUN));
 }
 
 #[cfg(test)]

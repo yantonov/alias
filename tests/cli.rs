@@ -154,6 +154,10 @@ fn write_failing_target(path: &Path) -> PathBuf {
     write_script(path, "exit 3\n")
 }
 
+fn write_nothing(path: &Path) -> PathBuf {
+    path.with_extension("missing")
+}
+
 #[cfg(windows)]
 fn write_nesting_printer(path: &Path) -> PathBuf {
     let target = path.with_extension("cmd");
@@ -234,6 +238,20 @@ fn the_exit_code_of_the_target_is_the_exit_code_of_the_wrapper() {
     let output = wrapper.run(&["co"]);
 
     assert_eq!(Some(3), output.status.code());
+}
+
+#[test]
+fn a_target_that_cannot_be_started_is_reported_as_127() {
+    let wrapper = Wrapper::fronting("[alias]\nco = \"checkout\"", write_nothing);
+
+    let output = wrapper.run(&["co"]);
+
+    assert_eq!(Some(127), output.status.code());
+    assert!(
+        stderr(&output).contains("Failed to execute process"),
+        "unexpected error: {}",
+        stderr(&output)
+    );
 }
 
 #[test]
