@@ -28,6 +28,7 @@ struct Wrapper {
     // Kept alive: dropping it removes the directory the wrapper lives in.
     _directory: TempDir,
     binary: PathBuf,
+    target: PathBuf,
 }
 
 impl Wrapper {
@@ -61,6 +62,7 @@ impl Wrapper {
         Wrapper {
             _directory: directory,
             binary,
+            target,
         }
     }
 
@@ -343,6 +345,54 @@ fn everything_that_needs_no_shell_runs_without_one() {
         stderr(&forwarded)
     );
     assert_eq!(vec!["status", "--short"], stdout_lines(&forwarded));
+}
+
+// A dry run shows it on every platform: nothing is started, so no real POSIX
+// shell has to exist for the argv to be worth looking at.
+#[test]
+fn run_as_shell_hands_the_target_to_the_shell_as_its_first_argument() {
+    let wrapper =
+        Wrapper::fronting_argv_printer("run_as_shell=true\n\n[alias]\nco = \"checkout main\"");
+
+    let mut command = wrapper.command(&["co", "topic"]);
+    command.env("ALIAS_DRY_RUN", "1");
+    let printed = stdout(&execute(command));
+
+    assert!(
+        printed.contains("executable: /bin/sh"),
+        "the shell should run the target:\n{}",
+        printed
+    );
+    assert!(
+        printed.contains(&format!("[1] {}", wrapper.target.display())),
+        "the target should be the first argument:\n{}",
+        printed
+    );
+    assert!(
+        printed.contains("[2] checkout"),
+        "missing from:\n{}",
+        printed
+    );
+    assert!(printed.contains("[4] topic"), "missing from:\n{}", printed);
+}
+
+// The other half of the decision above: this is the one path outside shell
+// aliases that does need a shell, and it says so instead of guessing one.
+#[test]
+fn run_as_shell_without_a_shell_is_reported() {
+    let wrapper =
+        Wrapper::fronting_argv_printer("run_as_shell=true\n\n[alias]\nco = \"checkout main\"");
+
+    let mut command = wrapper.command(&["co"]);
+    command.env_remove("SHELL");
+    let output = execute(command);
+
+    assert_eq!(Some(1), output.status.code(), "{}", stderr(&output));
+    assert!(
+        stderr(&output).contains("SHELL environment variable is not set"),
+        "unexpected error: {}",
+        stderr(&output)
+    );
 }
 
 // A dry run has to show the argv the target would have received, and the target

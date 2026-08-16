@@ -475,6 +475,35 @@ mod tests {
         }
     }
 
+    #[test]
+    fn run_as_shell_is_read_as_a_boolean() {
+        assert_eq!(
+            Some(true),
+            parse_config("run_as_shell = true")
+                .get_run_as_shell()
+                .unwrap()
+        );
+        assert_eq!(
+            Some(false),
+            parse_config("run_as_shell = false")
+                .get_run_as_shell()
+                .unwrap()
+        );
+        assert_eq!(None, empty_configuration().get_run_as_shell().unwrap());
+    }
+
+    #[test]
+    fn run_as_shell_that_is_not_a_boolean_is_rejected() {
+        let error = parse_config("run_as_shell = \"yes\"")
+            .get_run_as_shell()
+            .expect_err("a string is not a boolean");
+        assert!(
+            error.contains("run_as_shell"),
+            "the key has to be named: {}",
+            error
+        );
+    }
+
     fn split(value: &str) -> Vec<String> {
         split_arguments(value).expect("expected the value to split cleanly")
     }

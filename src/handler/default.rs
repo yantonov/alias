@@ -37,9 +37,7 @@ fn get_call_context(
 }
 
 // Whatever the arguments turned out to be, an expanded alias or the untouched
-// command line, they reach the target the same way: it is started directly, or
-// with run_as_shell it is handed to the shell, which then needs its path as the
-// first argument.
+// command line, they reach the target the same way.
 //
 // This is the only path a shell is looked up on outside of shell aliases, and
 // it is looked up here rather than by the caller: run_as_shell is off by
