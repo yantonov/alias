@@ -45,7 +45,10 @@ impl Environment {
 impl Environment {
     pub fn for_testing(executable_dir: PathBuf) -> Self {
         Environment {
-            executable_name: "test".to_string(),
+            // Autodetection walks the real PATH, so the name has to be one no
+            // machine can possibly have: whatever a test observes must not
+            // depend on what happens to be installed next to it.
+            executable_name: "alias-target-that-does-not-exist".to_string(),
             executable_dir,
             args: vec!["test".to_string()],
             shell: "/bin/sh".to_string(),

@@ -6,6 +6,7 @@ pub fn autodetect_executable(executable_path: &Path,
                              path_var: &str,
                              fs: &dyn FileSystemWrapper) -> Option<String> {
     let paths: Vec<_> = env::split_paths(path_var).collect();
+    let candidates = candidate_names(executable_name);
 
     // Search only after the wrapper's own directory in PATH, so we skip the
     // wrapper itself and find the real target executable.
@@ -22,13 +23,54 @@ pub fn autodetect_executable(executable_path: &Path,
         if same_directory(path_item, executable_path) {
             return None;
         }
-        let target = path_item.join(executable_name);
-        if fs.exists(&target) && fs.is_file(&target) {
-            target.to_str().map(|s| s.to_string())
-        } else {
-            None
-        }
+        // A directory at a time, every candidate within it before moving on,
+        // which is the order windows itself resolves a bare name in: a shim in
+        // the first PATH entry wins over an executable in the fifth.
+        candidates.iter().find_map(|candidate| {
+            let target = path_item.join(candidate);
+            if fs.exists(&target) && fs.is_file(&target) {
+                target.to_str().map(|s| s.to_string())
+            } else {
+                None
+            }
+        })
     })
+}
+
+// The names the target can go by. The wrapper is always an .exe on windows,
+// while the program it fronts often is not: npm and yarn are shipped as .cmd,
+// gradle and maven as .bat, and looking for npm.exe alone finds nothing.
+//
+// PATHEXT is deliberately not consulted. It describes what a shell resolves,
+// .vbs and .msc included, and those are not programs but scripts for an
+// interpreter: finding one would move the failure from detection to startup.
+// The list below is what a process can actually be started from, native first.
+#[cfg(windows)]
+fn candidate_names(executable_name: &str) -> Vec<String> {
+    const EXECUTABLE_EXTENSIONS: [&str; 3] = [".exe", ".cmd", ".bat"];
+
+    let stem = Path::new(executable_name)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or(executable_name);
+
+    // The name the wrapper carries comes first, so wherever the target is a
+    // plain .exe the search runs exactly as it did before.
+    let mut names = vec![executable_name.to_string()];
+    for extension in EXECUTABLE_EXTENSIONS {
+        let candidate = format!("{}{}", stem, extension);
+        if !names.iter().any(|name| name.eq_ignore_ascii_case(&candidate)) {
+            names.push(candidate);
+        }
+    }
+    names
+}
+
+// Executable extensions are a windows notion. Everywhere else the target goes
+// by the name the wrapper carries and by no other.
+#[cfg(not(windows))]
+fn candidate_names(executable_name: &str) -> Vec<String> {
+    vec![executable_name.to_string()]
 }
 
 // Windows and the default macOS filesystem are case-insensitive, so the same
@@ -131,13 +173,20 @@ mod tests {
             .expect("PATH is not valid UTF-8")
     }
 
+    fn detect(executable_path: &str,
+              executable_name: &str,
+              path_var: &str,
+              fs: &dyn FileSystemWrapper) -> Option<String> {
+        autodetect_executable(Path::new(executable_path), executable_name, path_var, fs)
+    }
+
     #[test]
     fn target_executable_can_be_found_later_in_the_path() {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/bin/alias", &TestFileDescriptor::file());
         fs.add("/usr/bin/alias", &TestFileDescriptor::file());
         let path = make_path(&["/bin", "/usr/bin"]);
-        let autodetect = autodetect_executable(Path::new("/bin"), "alias", &path, &fs).unwrap();
+        let autodetect = detect("/bin", "alias", &path, &fs).unwrap();
         assert_eq!(Path::new("/usr/bin/alias"), Path::new(&autodetect));
     }
 
@@ -148,7 +197,7 @@ mod tests {
         fs.add("/usr/bin/alias", &TestFileDescriptor::directory());
         fs.add("/usr/local/bin/alias", &TestFileDescriptor::file());
         let path = make_path(&["/bin", "/usr/bin", "/usr/local/bin"]);
-        let autodetect = autodetect_executable(Path::new("/bin"), "alias", &path, &fs).unwrap();
+        let autodetect = detect("/bin", "alias", &path, &fs).unwrap();
         assert_eq!(Path::new("/usr/local/bin/alias"), Path::new(&autodetect));
     }
 
@@ -163,19 +212,14 @@ mod tests {
             "/bin",
             "/usr/bin",
         ]);
-        assert!(autodetect_executable(
-            Path::new("/home/username/alias_app"),
-            "alias",
-            &path,
-            &fs,
-        ).is_none());
+        assert!(detect("/home/username/alias_app", "alias", &path, &fs).is_none());
     }
 
     #[test]
     fn alias_path_does_not_exist_in_path() {
         let fs = TestFileSystemWrapper::create();
         let path = make_path(&["/bin", "/usr/bin"]);
-        assert!(autodetect_executable(Path::new("/home/username/app"), "alias", &path, &fs).is_none());
+        assert!(detect("/home/username/app", "alias", &path, &fs).is_none());
     }
 
     #[test]
@@ -183,7 +227,7 @@ mod tests {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/home/username/app/alias", &TestFileDescriptor::file());
         let path = make_path(&["/home/username/app", "/bin", "/usr/bin"]);
-        assert!(autodetect_executable(Path::new("/home/username/app"), "alias", &path, &fs).is_none());
+        assert!(detect("/home/username/app", "alias", &path, &fs).is_none());
     }
 
     #[test]
@@ -191,13 +235,75 @@ mod tests {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/usr/bin/alias", &TestFileDescriptor::file());
         let path = make_path(&["/bin", "/usr/bin"]);
-        let autodetect = autodetect_executable(
-            Path::new("/home/username/app"),
-            "alias",
-            &path,
-            &fs,
-        ).unwrap();
+        let autodetect = detect("/home/username/app", "alias", &path, &fs).unwrap();
         assert_eq!(Path::new("/usr/bin/alias"), Path::new(&autodetect));
+    }
+
+    // The wrapper is always an .exe on windows, while the program it fronts
+    // often is not.
+    #[cfg(windows)]
+    mod executable_extensions {
+        use super::*;
+
+        // The layout node ships: a shell script with no extension, a .cmd shim
+        // and a .ps1 shim. Only the .cmd one can be started as a process.
+        #[test]
+        fn cmd_shim_is_found_among_the_shims_of_the_same_tool() {
+            let mut fs = TestFileSystemWrapper::create();
+            fs.add("/wrapper/npm.exe", &TestFileDescriptor::file());
+            fs.add("/tools/npm", &TestFileDescriptor::file());
+            fs.add("/tools/npm.ps1", &TestFileDescriptor::file());
+            fs.add("/tools/npm.cmd", &TestFileDescriptor::file());
+            let path = make_path(&["/wrapper", "/tools"]);
+            let autodetect = detect("/wrapper", "npm.exe", &path, &fs).unwrap();
+            assert_eq!(Path::new("/tools/npm.cmd"), Path::new(&autodetect));
+        }
+
+        #[test]
+        fn bat_shim_is_found() {
+            let mut fs = TestFileSystemWrapper::create();
+            fs.add("/wrapper/gradle.exe", &TestFileDescriptor::file());
+            fs.add("/tools/gradle.bat", &TestFileDescriptor::file());
+            let path = make_path(&["/wrapper", "/tools"]);
+            let autodetect = detect("/wrapper", "gradle.exe", &path, &fs).unwrap();
+            assert_eq!(Path::new("/tools/gradle.bat"), Path::new(&autodetect));
+        }
+
+        #[test]
+        fn the_executable_itself_wins_over_a_shim_beside_it() {
+            let mut fs = TestFileSystemWrapper::create();
+            fs.add("/wrapper/git.exe", &TestFileDescriptor::file());
+            fs.add("/tools/git.cmd", &TestFileDescriptor::file());
+            fs.add("/tools/git.exe", &TestFileDescriptor::file());
+            let path = make_path(&["/wrapper", "/tools"]);
+            let autodetect = detect("/wrapper", "git.exe", &path, &fs).unwrap();
+            assert_eq!(Path::new("/tools/git.exe"), Path::new(&autodetect));
+        }
+
+        // Directory beats extension, the order windows resolves a bare name
+        // in. Reversing the two loops would silently invert it.
+        #[test]
+        fn a_shim_nearby_wins_over_an_executable_further_along_the_path() {
+            let mut fs = TestFileSystemWrapper::create();
+            fs.add("/wrapper/npm.exe", &TestFileDescriptor::file());
+            fs.add("/tools/npm.cmd", &TestFileDescriptor::file());
+            fs.add("/other/npm.exe", &TestFileDescriptor::file());
+            let path = make_path(&["/wrapper", "/tools", "/other"]);
+            let autodetect = detect("/wrapper", "npm.exe", &path, &fs).unwrap();
+            assert_eq!(Path::new("/tools/npm.cmd"), Path::new(&autodetect));
+        }
+    }
+
+    // Executable extensions are a windows notion: a .cmd next to a unix target
+    // is a file that happens to share its name, nothing more.
+    #[cfg(not(windows))]
+    #[test]
+    fn extensions_are_not_appended_outside_windows() {
+        let mut fs = TestFileSystemWrapper::create();
+        fs.add("/wrapper/npm", &TestFileDescriptor::file());
+        fs.add("/tools/npm.cmd", &TestFileDescriptor::file());
+        let path = make_path(&["/wrapper", "/tools"]);
+        assert!(detect("/wrapper", "npm", &path, &fs).is_none());
     }
 
     #[test]
