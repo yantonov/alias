@@ -19,10 +19,11 @@ Technically, `alias` is just a thin wrapper around the target command-line appli
 6. [Dry run](#dry-run)
 7. [Override](#override)
 8. [Target executable location](#target-executable-location)
-9. [Different operating systems](#different-operating-systems)
-10. [Windows: shell aliases need a POSIX shell](#windows-shell-aliases-need-a-posix-shell)
-11. [Shell scripts on Windows](#shell-scripts-on-windows)
-12. [Examples](#examples)
+9. [Endless loops](#endless-loops)
+10. [Different operating systems](#different-operating-systems)
+11. [Windows: shell aliases need a POSIX shell](#windows-shell-aliases-need-a-posix-shell)
+12. [Shell scripts on Windows](#shell-scripts-on-windows)
+13. [Examples](#examples)
 
 ## Technical notes
 Technically, it is just a thin wrapper (proxy) that conditionally runs the target program.  
@@ -188,6 +189,15 @@ There are two options:
 1. You can explicitly define the target executable using the 'executable' parameter (see the example [here](https://github.com/yantonov/alias/blob/master/docs/sample_config.toml)).  
 2. Without explicit configuration, the app tries to detect the target executable automatically by looking for an existing file with the same name later in the PATH.  
 In that case, you have to place this alias application in front of the target executable in the PATH variable.
+
+## Endless loops
+A wrapper that ends up calling itself never stops. There are two ways in, and each is closed differently.
+
+**The target is the wrapper.** An `executable` entry that points back at the wrapper, or at a symlink to it, is refused before anything runs, with the path it resolved to named in the error. This one is easy to write by hand, since the config sits right next to the wrapper.
+
+**Something calls the wrapper back.** A shell alias can invoke the very alias it defines — `st = "!git st"` in a wrapper named `git` — and two wrappers can name each other. Nothing about such a config looks wrong on paper, so it is bounded instead: every call the wrapper makes carries `ALIAS_DEPTH`, and the 16th nested one is refused.
+
+Honest nesting is shallow. A shell alias that names the wrapped program (`tail = "!docker logs -f"` in a wrapper named `docker`) is two levels, and stacking sixteen of them takes deliberate effort. The variable is set by the wrapper for the programs it starts; setting it yourself only lowers that ceiling.
 
 ## Different operating systems
 Different operating systems place binary files in different directories.  

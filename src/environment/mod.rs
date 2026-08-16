@@ -21,6 +21,12 @@ impl Environment {
         &self.executable_dir
     }
 
+    // The path current_exe() reported, put back together from the two halves
+    // it was split into on the way in.
+    pub fn executable_path(&self) -> PathBuf {
+        self.executable_dir.join(&self.executable_name)
+    }
+
     // Everything past the name the wrapper was called by. exec() is free to
     // hand a process an empty argv, so the tail is taken rather than sliced.
     pub fn call_arguments(&self) -> &[String] {

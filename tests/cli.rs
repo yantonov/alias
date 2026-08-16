@@ -154,6 +154,18 @@ fn write_failing_target(path: &Path) -> PathBuf {
     write_script(path, "exit 3\n")
 }
 
+#[cfg(windows)]
+fn write_nesting_printer(path: &Path) -> PathBuf {
+    let target = path.with_extension("cmd");
+    fs::write(&target, "@echo off\r\necho %ALIAS_DEPTH%\r\n").expect("a target program");
+    target
+}
+
+#[cfg(unix)]
+fn write_nesting_printer(path: &Path) -> PathBuf {
+    write_script(path, "printf '%s\\n' \"${ALIAS_DEPTH}\"\n")
+}
+
 #[cfg(unix)]
 fn write_script(path: &Path, body: &str) -> PathBuf {
     use std::os::unix::fs::PermissionsExt;
@@ -424,6 +436,75 @@ fn the_config_created_on_the_first_launch_is_read_back_on_the_second() {
         second.status.code(),
         "second launch failed: {}",
         stderr(&second)
+    );
+}
+
+// The level a call is made at travels to whatever that call starts, so that a
+// loop running through several processes still adds up to a single count.
+#[test]
+fn every_call_carries_the_level_it_was_made_at() {
+    let wrapper = Wrapper::fronting("[alias]\nco = \"checkout\"", write_nesting_printer);
+
+    assert_eq!(vec!["1"], stdout_lines(&wrapper.run(&["co"])));
+
+    let mut command = wrapper.command(&["co"]);
+    command.env("ALIAS_DEPTH", "4");
+    assert_eq!(vec!["5"], stdout_lines(&execute(command)));
+}
+
+// The backstop against a loop of any shape: a shell alias that invokes itself,
+// or two wrappers naming each other. Reaching the limit stops the chain instead
+// of leaving it to run until the machine gives up.
+#[test]
+fn a_call_that_is_already_too_deep_is_refused() {
+    let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
+
+    let mut command = wrapper.command(&["co"]);
+    command.env("ALIAS_DEPTH", "16");
+    let output = execute(command);
+
+    assert_eq!(Some(1), output.status.code(), "{}", stderr(&output));
+    assert!(
+        stderr(&output).contains("nested calls"),
+        "unexpected error: {}",
+        stderr(&output)
+    );
+    assert!(
+        stdout_lines(&output).is_empty(),
+        "the target ran after all: {}",
+        stdout(&output)
+    );
+}
+
+// The straightforward way into a loop: the config sits next to the wrapper, and
+// 'executable' is a path spelled by hand. Caught on the spot rather than by the
+// nesting limit, so that the error names what is actually wrong.
+#[test]
+fn a_target_that_is_the_wrapper_itself_is_refused() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let binary = directory.path().join(executable_file_name("frontend"));
+    {
+        let _guard = EXECUTABLES.write().unwrap_or_else(PoisonError::into_inner);
+        fs::copy(env!("CARGO_BIN_EXE_alias"), &binary).expect("the wrapper binary is copied");
+    }
+    fs::write(
+        directory.path().join("config.toml"),
+        format!(
+            "executable={}\n",
+            as_toml_string(&binary.display().to_string())
+        ),
+    )
+    .expect("a config beside it");
+
+    let mut command = Command::new(&binary);
+    command.arg("status").env("SHELL", "/bin/sh");
+    let output = execute(command);
+
+    assert_eq!(Some(1), output.status.code(), "{}", stderr(&output));
+    assert!(
+        stderr(&output).contains("would call itself forever"),
+        "unexpected error: {}",
+        stderr(&output)
     );
 }
 

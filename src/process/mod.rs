@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::env;
 use std::process::{Command, ExitStatus};
 
 pub struct CallContext {
@@ -11,6 +12,49 @@ fn format_command(executable: &str, args: &[String]) -> String {
         .chain(args.iter().map(String::as_str))
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+// A wrapper that ends up calling itself never stops. 'executable' can point
+// back at it, two wrappers can name each other, and a shell alias can invoke
+// the very alias it defines: st = "!git st" resolves to itself on every turn.
+// That last one is both the easiest to write by accident and the most
+// expensive, since every turn leaves a shell behind as well.
+//
+// Every call the wrapper makes carries the level it was made at, so a loop of
+// any shape reaches the limit instead of running forever. Honest nesting stays
+// shallow: a shell alias naming the wrapped program is two levels, and the
+// limit leaves room for far more than anyone stacks in practice.
+const NESTING: &str = "ALIAS_DEPTH";
+const NESTING_LIMIT: u32 = 16;
+
+// Anything that is not a number is treated as no nesting at all: the variable
+// belongs to the wrapper, and a value it did not write says nothing about how
+// deep the call really is.
+fn nesting_level() -> u32 {
+    env::var(NESTING)
+        .ok()
+        .and_then(|level| level.parse().ok())
+        .unwrap_or(0)
+}
+
+pub fn check_nesting_limit() -> Result<(), String> {
+    let level = nesting_level();
+    if level < NESTING_LIMIT {
+        return Ok(());
+    }
+    Err(format!(
+        "{} levels of nested calls ({} is set): something calls this wrapper back. \
+Check the 'executable' entry of the config and any shell alias that names the wrapped program.",
+        level, NESTING
+    ))
+}
+
+fn command(context: &CallContext) -> Command {
+    let mut command = Command::new(&context.executable);
+    command
+        .args(&context.args)
+        .env(NESTING, (nesting_level() + 1).to_string());
+    command
 }
 
 // A child terminated by a signal has no exit code of its own. Report it the way
@@ -34,25 +78,25 @@ fn exit_code(status: ExitStatus) -> Option<i32> {
 // straight to the target, and its exit status reaches the caller untouched.
 // Returns only when exec itself failed.
 #[cfg(unix)]
-fn run(executable: &str, args: &[String]) -> Result<Option<i32>, String> {
+fn run(context: &CallContext) -> Result<Option<i32>, String> {
     use std::os::unix::process::CommandExt;
 
-    let error = Command::new(executable).args(args).exec();
+    let error = command(context).exec();
 
     Err(format!(
         "Failed to execute process [{}]. {}",
-        format_command(executable, args),
+        format_command(&context.executable, &context.args),
         error
     ))
 }
 
 // Windows has no exec, so the target runs as a child process.
 #[cfg(not(unix))]
-fn run(executable: &str, args: &[String]) -> Result<Option<i32>, String> {
-    let mut output = Command::new(executable).args(args).spawn().map_err(|e| {
+fn run(context: &CallContext) -> Result<Option<i32>, String> {
+    let mut output = command(context).spawn().map_err(|e| {
         format!(
             "Failed to execute process [{}]. {}",
-            format_command(executable, args),
+            format_command(&context.executable, &context.args),
             e
         )
     })?;
@@ -60,14 +104,14 @@ fn run(executable: &str, args: &[String]) -> Result<Option<i32>, String> {
     output.wait().map(exit_code).map_err(|e| {
         format!(
             "Failed to wait child process [{}]. {}",
-            format_command(executable, args),
+            format_command(&context.executable, &context.args),
             e
         )
     })
 }
 
 pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
-    run(&context.executable, &context.args)
+    run(context)
 }
 
 // Decides what of a captured run is worth showing to the user.
@@ -97,16 +141,13 @@ fn presentable_output<'a>(
 }
 
 pub fn try_execute_captured(context: &CallContext) -> Result<Option<i32>, String> {
-    let output = Command::new(&context.executable)
-        .args(&context.args)
-        .output()
-        .map_err(|e| {
-            format!(
-                "Failed to execute process [{}]. {}",
-                format_command(&context.executable, &context.args),
-                e
-            )
-        })?;
+    let output = command(context).output().map_err(|e| {
+        format!(
+            "Failed to execute process [{}]. {}",
+            format_command(&context.executable, &context.args),
+            e
+        )
+    })?;
 
     let code = exit_code(output.status);
     let (stdout, stderr) = presentable_output(&output.stdout, &output.stderr, code);

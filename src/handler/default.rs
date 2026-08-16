@@ -1,7 +1,7 @@
 use crate::config::Alias::{RegularAlias, ShellAlias};
 use crate::config::Configuration;
-use crate::environment::{Environment, expand_env};
-use crate::handler::Handler;
+use crate::environment::Environment;
+use crate::handler::{Handler, get_executable};
 use crate::process::CallContext;
 use crate::{config, environment, process};
 use std::env;
@@ -34,16 +34,6 @@ fn get_call_context(
             call_arguments.to_vec(),
         ),
     }
-}
-
-fn get_executable(
-    environment: &Environment,
-    configuration: &Configuration,
-) -> Result<Option<String>, String> {
-    Ok(configuration
-        .get_executable()?
-        .map(|config| expand_env::expand_env_var(&config))
-        .or_else(|| environment.try_detect_executable()))
 }
 
 // Whatever the arguments turned out to be, an expanded alias or the untouched
