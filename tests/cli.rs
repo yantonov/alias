@@ -391,6 +391,73 @@ fn the_config_created_on_the_first_launch_is_read_back_on_the_second() {
     );
 }
 
+// A wrapper is routinely installed into a directory nobody can write to:
+// /usr/local/bin owned by root, an immutable image, the read only nix store.
+// There is no config file there and no way to create one, and forwarding, which
+// needs nothing from the config, has to keep working regardless.
+//
+// Unix only: the read only bit is what makes the case, and windows does not
+// stop a file from being created in a directory marked that way.
+#[cfg(unix)]
+#[test]
+fn a_wrapper_that_cannot_create_a_config_still_forwards_to_the_target() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let wrapper_directory = directory.path().join("bin");
+    let target_directory = directory.path().join("target");
+    fs::create_dir_all(&wrapper_directory).expect("a directory for the wrapper");
+    fs::create_dir_all(&target_directory).expect("a directory for the target");
+
+    // Same file name in both, the wrapper first, so that autodetection resolves
+    // the target: there is no config to point at it with.
+    let name = executable_file_name("frontend");
+    let binary = wrapper_directory.join(&name);
+    {
+        let _guard = EXECUTABLES.write().unwrap_or_else(PoisonError::into_inner);
+        fs::copy(env!("CARGO_BIN_EXE_alias"), &binary).expect("the wrapper binary is copied");
+        write_argv_printer(&target_directory.join(&name));
+    }
+
+    let read_only = fs::Permissions::from_mode(0o555);
+    let writable = fs::Permissions::from_mode(0o755);
+    fs::set_permissions(&wrapper_directory, read_only).expect("a read only directory");
+
+    // Root ignores the permission bits altogether, and then there is nothing
+    // here to test. Restore and leave rather than assert something untrue.
+    let probe = wrapper_directory.join("probe");
+    if fs::write(&probe, b"").is_ok() {
+        fs::remove_file(&probe).expect("the probe is removed");
+        fs::set_permissions(&wrapper_directory, writable).expect("a writable directory again");
+        return;
+    }
+
+    let path = std::env::join_paths([&wrapper_directory, &target_directory])
+        .expect("a PATH out of two directories");
+    let mut command = Command::new(&binary);
+    command
+        .args(["status", "--short"])
+        .env("SHELL", "/bin/sh")
+        .env("PATH", &path);
+    let output = execute(command);
+
+    // Restored before the temporary directory is dropped: nothing inside a read
+    // only directory can be unlinked, and it would be left behind.
+    fs::set_permissions(&wrapper_directory, writable).expect("a writable directory again");
+
+    assert_eq!(
+        Some(0),
+        output.status.code(),
+        "the wrapper refused to run: {}",
+        stderr(&output)
+    );
+    assert_eq!(vec!["status", "--short"], stdout_lines(&output));
+    assert!(
+        !wrapper_directory.join("config.toml").exists(),
+        "no config file could have been created here"
+    );
+}
+
 // Shell aliases need a real POSIX shell, which is not something windows has by
 // itself; the argv they are handed is covered by unit tests on every platform.
 #[cfg(unix)]

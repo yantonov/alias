@@ -42,7 +42,8 @@ therefore, you do not need to pollute the global namespace with shell aliases (u
 1. Put the executable in a directory on your PATH, and name it the same as the target program (the program without alias support)  
 You can get prebuilt binaries [here](https://github.com/yantonov/alias/releases)
 2. Write a config (config.toml) and put it next to the executable  
-(a sample config will be created on the first launch if it does not exist)
+(a sample config will be created on the first launch if it does not exist)  
+A directory that cannot be written to is fine: nothing is created there, and the wrapper keeps forwarding every command to the target program — it just has no aliases until a config is put in place by hand. `--aliases` says so when that is the case.
 3. Use custom aliases just as if they were supported out of the box.  
 
 ### Automatic

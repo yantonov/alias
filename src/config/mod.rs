@@ -1,6 +1,4 @@
 use std::fs;
-use std::fs::File;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use toml::map::Map;
 
@@ -233,25 +231,29 @@ fn executable_line(detected: Option<String>) -> String {
     }
 }
 
-fn create_config_if_needed(
-    config_file_path: &Path,
-    environment: &Environment,
-) -> Result<(), String> {
-    if !config_file_path.exists() {
-        let mut f = File::create(config_file_path)
-            .map_err(|_| format!("Unable to create {} file", config_file_path.display()))?;
-
-        let executable = executable_line(environment.try_detect_executable());
-
-        let sample_config_content = [&executable, "", "[alias]", "test_alias1=\"--help\""];
-        for line in &sample_config_content {
-            f.write_all(line.as_bytes())
-                .map_err(|_| "Unable to write data")?;
-            f.write_all("\n".as_bytes())
-                .map_err(|_| "Unable to write data")?;
-        }
+// The sample config is a convenience, not a prerequisite. A wrapper is
+// routinely installed into a directory nobody can write to: /usr/local/bin
+// owned by root, an immutable image, the read only nix store. Failing to start
+// there would take down plain forwarding as well, which needs nothing from the
+// config file at all.
+//
+// So a sample that cannot be created is stepped over, and quietly: a proxy
+// that does its job has no business printing a warning on every single call.
+// The absence is reported by --aliases, which is the screen someone opens when
+// the aliases they expected are not there.
+fn create_config_if_needed(config_file_path: &Path, environment: &Environment) {
+    if config_file_path.exists() {
+        return;
     }
-    Ok(())
+
+    let sample_config_content = format!(
+        "{}\n\n[alias]\ntest_alias1=\"--help\"\n",
+        executable_line(environment.try_detect_executable())
+    );
+
+    // Written in a single call: a half written file is worse than no file,
+    // since the next launch would read it back as the configuration.
+    let _ = fs::write(config_file_path, sample_config_content);
 }
 
 pub fn read_configuration(config_file_path: &Path) -> Result<Configuration, String> {
@@ -279,18 +281,26 @@ pub fn empty_configuration() -> Configuration {
     }
 }
 
+// A file that is not there is not an error: without config.toml the wrapper
+// forwards everything to the target, and override.toml is optional to begin
+// with. A file that does exist and cannot be read or parsed is a different
+// matter entirely, and is reported.
+fn read_configuration_if_present(config_file_path: &Path) -> Result<Configuration, String> {
+    if config_file_path.exists() {
+        read_configuration(config_file_path)
+    } else {
+        Ok(empty_configuration())
+    }
+}
+
 pub fn get_configuration(environment: &Environment) -> Result<Configuration, String> {
     let executable_dir = environment.executable_dir();
     let config_file_path = get_config_path(executable_dir);
-    create_config_if_needed(&config_file_path, environment)?;
-    let configuration = read_configuration(&config_file_path)?;
+    create_config_if_needed(&config_file_path, environment);
+    let configuration = read_configuration_if_present(&config_file_path)?;
 
     let config_override_file_path = get_config_override_path(executable_dir);
-    let override_configuration = if config_override_file_path.exists() {
-        read_configuration(&config_override_file_path)?
-    } else {
-        empty_configuration()
-    };
+    let override_configuration = read_configuration_if_present(&config_override_file_path)?;
 
     Ok(merge(&configuration, &override_configuration))
 }
@@ -632,6 +642,26 @@ mod tests {
             dir.path().join("config.toml").exists(),
             "config.toml should have been created"
         );
+    }
+
+    // A directory that does not exist stands in for one that cannot be written
+    // to: creating a file inside it fails the same way on every operating
+    // system, while a read only bit does not (windows lets a file be created
+    // in a directory carrying that attribute).
+    #[test]
+    fn get_configuration_survives_a_directory_it_cannot_write_to() {
+        let dir = tempfile::tempdir().unwrap();
+        let unwritable = dir.path().join("missing");
+        let env = Environment::for_testing(unwritable.clone());
+
+        let config = get_configuration(&env)
+            .expect("a config file that cannot be created is not a fatal error");
+
+        assert!(
+            config.resolve_alias(&["co".to_string()]).unwrap().is_none(),
+            "there are no aliases without a config file"
+        );
+        assert!(!unwritable.join("config.toml").exists());
     }
 
     #[test]
