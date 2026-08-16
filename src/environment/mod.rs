@@ -21,8 +21,10 @@ impl Environment {
         &self.executable_dir
     }
 
+    // Everything past the name the wrapper was called by. exec() is free to
+    // hand a process an empty argv, so the tail is taken rather than sliced.
     pub fn call_arguments(&self) -> &[String] {
-        &self.args[1..self.args.len()]
+        self.args.get(1..).unwrap_or(&[])
     }
 
     pub fn shell(&self) -> &str {
@@ -48,6 +50,36 @@ impl Environment {
             args: vec!["test".to_string()],
             shell: "/bin/sh".to_string(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn environment_with(args: Vec<String>) -> Environment {
+        Environment {
+            executable_name: "git".to_string(),
+            executable_dir: PathBuf::from("/bin"),
+            args,
+            shell: "/bin/sh".to_string(),
+        }
+    }
+
+    #[test]
+    fn call_arguments_drop_the_name_the_wrapper_was_called_by() {
+        let environment = environment_with(vec!["git".to_string(), "co".to_string()]);
+        assert_eq!(&["co".to_string()][..], environment.call_arguments());
+    }
+
+    #[test]
+    fn call_arguments_are_empty_without_an_argument() {
+        assert!(environment_with(vec!["git".to_string()]).call_arguments().is_empty());
+    }
+
+    #[test]
+    fn call_arguments_are_empty_when_argv_is_empty() {
+        assert!(environment_with(vec![]).call_arguments().is_empty());
     }
 }
 
