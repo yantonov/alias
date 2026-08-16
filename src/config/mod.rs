@@ -30,7 +30,9 @@ fn resolve_in_table(table: &Map<String, Value>, args: &[String], consumed: usize
         None => Ok(None),
         Some(v) => {
             if let Some(s) = v.as_str() {
-                Ok(Some((parse_alias_str(s), consumed + 1)))
+                let alias = parse_alias_str(s)
+                    .map_err(|e| format!("bad alias '{}': {}", args[0], e))?;
+                Ok(Some((alias, consumed + 1)))
             } else if let Some(t) = v.as_table() {
                 resolve_in_table(t, &args[1..], consumed + 1)
             } else {
@@ -56,11 +58,64 @@ fn build_alias_tree(table: &Map<String, Value>) -> Vec<(String, AliasNode)> {
     entries
 }
 
-fn parse_alias_str(value: &str) -> Alias {
+// Splits an alias into arguments the same way git splits its own aliases:
+// runs of whitespace separate arguments, '...' and "..." group text into a
+// single argument, and a backslash takes the next character literally unless
+// it appears inside single quotes. There are no C style escapes: "a\nb" is
+// anb, not a newline. An unterminated quote is an error rather than something
+// quietly handed over to the target program.
+fn split_arguments(value: &str) -> Result<Vec<String>, String> {
+    let mut arguments: Vec<String> = Vec::new();
+    let mut current = String::new();
+    let mut started = false;
+    let mut quote: Option<char> = None;
+    let mut characters = value.chars();
+
+    while let Some(c) = characters.next() {
+        match quote {
+            None if c.is_whitespace() => {
+                if started {
+                    arguments.push(std::mem::take(&mut current));
+                    started = false;
+                }
+            }
+            None if c == '"' || c == '\'' => {
+                quote = Some(c);
+                started = true;
+            }
+            Some(opening) if c == opening => {
+                quote = None;
+            }
+            _ => {
+                started = true;
+                if c == '\\' && quote != Some('\'') {
+                    match characters.next() {
+                        Some(escaped) => current.push(escaped),
+                        None => return Err("ends with a backslash".to_string()),
+                    }
+                } else {
+                    current.push(c);
+                }
+            }
+        }
+    }
+
+    if quote.is_some() {
+        return Err("unclosed quote".to_string());
+    }
+    if started {
+        arguments.push(current);
+    }
+    Ok(arguments)
+}
+
+fn parse_alias_str(value: &str) -> Result<Alias, String> {
     if value.starts_with('!') {
-        Alias::ShellAlias(value.chars().skip(1).collect())
+        // Shell aliases are handed to the shell verbatim, it does its own
+        // splitting.
+        Ok(Alias::ShellAlias(value.chars().skip(1).collect()))
     } else {
-        Alias::RegularAlias(value.split(' ').map(|t| t.to_string()).collect())
+        Ok(Alias::RegularAlias(split_arguments(value)?))
     }
 }
 
@@ -378,6 +433,104 @@ mod tests {
                 }
             }
             _ => panic!("expected Group for docker"),
+        }
+    }
+
+    fn split(value: &str) -> Vec<String> {
+        split_arguments(value).expect("expected the value to split cleanly")
+    }
+
+    #[test]
+    fn runs_of_whitespace_do_not_produce_empty_arguments() {
+        assert_eq!(vec!["checkout", "main"], split("checkout  main"));
+        // Deliberate deviation from git: git turns a trailing run of
+        // whitespace into one empty argument, which is exactly the kind of
+        // silent junk in argv this splitting is meant to remove.
+        assert_eq!(vec!["checkout", "main"], split("  checkout\tmain  "));
+    }
+
+    #[test]
+    fn double_quotes_group_an_argument() {
+        assert_eq!(vec!["commit", "-m", "wip message"], split("commit -m \"wip message\""));
+    }
+
+    #[test]
+    fn single_quotes_group_an_argument() {
+        assert_eq!(vec!["commit", "-m", "wip message"], split("commit -m 'wip message'"));
+    }
+
+    #[test]
+    fn quotes_of_the_other_kind_are_literal_inside_a_quoted_argument() {
+        assert_eq!(vec!["-m", "has\"dq"], split("-m 'has\"dq'"));
+        assert_eq!(vec!["-m", "mixed 'inner' quotes"], split("-m \"mixed 'inner' quotes\""));
+    }
+
+    #[test]
+    fn backslash_escapes_the_next_character_outside_single_quotes() {
+        assert_eq!(vec!["-m", "a b"], split("-m a\\ b"));
+        assert_eq!(vec!["-m", "a\"b"], split("-m \"a\\\"b\""));
+        // no C style escapes: \n is a literal n
+        assert_eq!(vec!["-m", "anb"], split("-m \"a\\nb\""));
+    }
+
+    #[test]
+    fn backslash_is_literal_inside_single_quotes() {
+        assert_eq!(vec!["-m", "a\\ b"], split("-m 'a\\ b'"));
+    }
+
+    #[test]
+    fn quotes_can_produce_an_empty_argument() {
+        assert_eq!(vec!["run", ""], split("run \"\""));
+    }
+
+    #[test]
+    fn empty_value_produces_no_arguments() {
+        assert!(split("").is_empty());
+        assert!(split("   ").is_empty());
+    }
+
+    #[test]
+    fn trailing_backslash_is_rejected() {
+        assert_eq!(Err("ends with a backslash".to_string()), split_arguments("-m a\\"));
+        assert_eq!(Err("ends with a backslash".to_string()), split_arguments("\\"));
+        // inside single quotes a backslash is an ordinary character
+        assert_eq!(vec!["a\\"], split("'a\\'"));
+    }
+
+    #[test]
+    fn unclosed_quote_is_rejected() {
+        assert_eq!(Err("unclosed quote".to_string()), split_arguments("-m unbalanced\"quote"));
+        assert_eq!(Err("unclosed quote".to_string()), split_arguments("-m 'still open"));
+    }
+
+    #[test]
+    fn unclosed_quote_error_names_the_alias() {
+        let config = parse_config("[alias]\npsn = \"ps --format=\\\"unclosed\"");
+        let error = match config.resolve_alias(&["psn".to_string()]) {
+            Err(error) => error,
+            Ok(_) => panic!("expected an error for the unclosed quote"),
+        };
+        assert!(error.contains("psn"), "error should name the alias: {}", error);
+        assert!(error.contains("unclosed quote"), "error should say why: {}", error);
+    }
+
+    #[test]
+    fn shell_alias_is_not_split() {
+        let config = parse_config("[alias]\nclean = \"!rm -rf  *.tmp\"");
+        match config.resolve_alias(&["clean".to_string()]).unwrap() {
+            Some((Alias::ShellAlias(cmd), _)) => assert_eq!("rm -rf  *.tmp", cmd),
+            _ => panic!("expected ShellAlias"),
+        }
+    }
+
+    #[test]
+    fn quoted_argument_survives_alias_resolution() {
+        let config = parse_config("[alias]\nci = 'commit -m \"wip\"'");
+        match config.resolve_alias(&["ci".to_string()]).unwrap() {
+            Some((Alias::RegularAlias(args), _)) => {
+                assert_eq!(vec!["commit", "-m", "wip"], args);
+            }
+            _ => panic!("expected RegularAlias"),
         }
     }
 

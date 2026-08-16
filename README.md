@@ -60,6 +60,18 @@ co = "checkout main"
 |---------|------------|
 | `git co` | `git checkout main` |
 
+Arguments are split the way git splits its own aliases: runs of whitespace separate arguments, `"..."` and `'...'` keep spaces inside a single argument, and a backslash takes the next character literally (except inside single quotes, where it is an ordinary character).  
+TOML literal strings keep quoted aliases readable, with no escaping:
+```toml
+[alias]
+ci = 'commit -m "work in progress"'
+```
+| Command | Arguments passed to the target |
+|---------|--------------------------------|
+| `git ci` | `commit`, `-m`, `work in progress` |
+
+An unterminated quote or a trailing backslash is reported as a configuration error instead of being passed on to the target program.
+
 **Shell alias** — prefixed with `!`, executed by the current shell:
 ```toml
 [alias]
