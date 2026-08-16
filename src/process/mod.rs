@@ -26,8 +26,28 @@ fn exit_code(status: ExitStatus) -> Option<i32> {
     status.code()
 }
 
-fn exec(executable: &str,
-        args: &[String]) -> Result<Option<i32>, String>
+// Replace this process with the target instead of spawning a child, which is
+// what a thin wrapper should do: no extra link in the process tree, signals go
+// straight to the target, and its exit status reaches the caller untouched.
+// Returns only when exec itself failed.
+#[cfg(unix)]
+fn run(executable: &str,
+       args: &[String]) -> Result<Option<i32>, String>
+{
+    use std::os::unix::process::CommandExt;
+
+    let error = Command::new(executable)
+        .args(args)
+        .exec();
+
+    Err(format!("Failed to execute process [{}]. {}",
+                format_command(executable, args), error))
+}
+
+// Windows has no exec, so the target runs as a child process.
+#[cfg(not(unix))]
+fn run(executable: &str,
+       args: &[String]) -> Result<Option<i32>, String>
 {
     let mut output = Command::new(executable)
         .args(args)
@@ -42,7 +62,7 @@ fn exec(executable: &str,
 }
 
 pub fn execute(context: &CallContext) -> Result<Option<i32>, String> {
-    exec(&context.executable, &context.args)
+    run(&context.executable, &context.args)
 }
 
 pub fn try_execute_captured(context: &CallContext) -> Result<Option<i32>, String> {
