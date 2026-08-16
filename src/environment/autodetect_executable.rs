@@ -60,9 +60,13 @@ impl FileSystemWrapper for OsFileSystemWrapper {
         path.exists()
     }
 
+    // Symlinks are followed on purpose: package managers routinely put a link
+    // in PATH pointing at the real binary elsewhere (every homebrew formula
+    // does), and such a link is a perfectly good target. What must not be
+    // accepted is a directory carrying the target's name.
     fn is_file(&self, path: &Path) -> bool {
-        let metadata = std::fs::symlink_metadata(path);
-        metadata.map(|x| !x.is_dir())
+        std::fs::metadata(path)
+            .map(|metadata| metadata.is_file())
             .unwrap_or(false)
     }
 }
@@ -83,7 +87,7 @@ mod tests {
             TestFileDescriptor { is_file: true }
         }
 
-        pub fn symlink() -> TestFileDescriptor {
+        pub fn directory() -> TestFileDescriptor {
             TestFileDescriptor { is_file: false }
         }
     }
@@ -138,12 +142,14 @@ mod tests {
     }
 
     #[test]
-    fn symlink_to_target_executable_can_be_found_later_in_the_path() {
+    fn directory_named_after_the_target_is_skipped() {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/bin/alias", &TestFileDescriptor::file());
-        fs.add("/usr/bin/alias", &TestFileDescriptor::symlink());
-        let path = make_path(&["/bin", "/usr/bin"]);
-        assert!(autodetect_executable(Path::new("/bin"), "alias", &path, &fs).is_none());
+        fs.add("/usr/bin/alias", &TestFileDescriptor::directory());
+        fs.add("/usr/local/bin/alias", &TestFileDescriptor::file());
+        let path = make_path(&["/bin", "/usr/bin", "/usr/local/bin"]);
+        let autodetect = autodetect_executable(Path::new("/bin"), "alias", &path, &fs).unwrap();
+        assert_eq!(Path::new("/usr/local/bin/alias"), Path::new(&autodetect));
     }
 
     #[test]
@@ -214,6 +220,38 @@ mod tests {
     #[test]
     fn same_directory_keeps_case_on_case_sensitive_filesystems() {
         assert!(!same_directory(Path::new("/home/bob/BIN"), Path::new("/home/bob/bin")));
+    }
+
+    // The fake filesystem cannot express symlinks, and a link in PATH pointing
+    // at the real binary is the normal case on macOS, where homebrew installs
+    // every executable that way. Uses the real filesystem for that reason.
+    #[cfg(unix)]
+    #[test]
+    fn symlink_to_the_target_executable_is_detected() {
+        let dir = tempfile::tempdir().unwrap();
+        let wrapper_dir = dir.path().join("git-aliases");
+        let link_dir = dir.path().join("link");
+        let real_dir = dir.path().join("real");
+        std::fs::create_dir_all(&wrapper_dir).unwrap();
+        std::fs::create_dir_all(&link_dir).unwrap();
+        std::fs::create_dir_all(&real_dir).unwrap();
+        std::fs::write(wrapper_dir.join("git"), b"wrapper").unwrap();
+        std::fs::write(real_dir.join("git"), b"the real git").unwrap();
+        std::os::unix::fs::symlink(real_dir.join("git"), link_dir.join("git")).unwrap();
+
+        let path_var = env::join_paths([&wrapper_dir, &link_dir])
+            .unwrap()
+            .into_string()
+            .unwrap();
+
+        let detected = autodetect_executable(
+            &wrapper_dir,
+            "git",
+            &path_var,
+            &OsFileSystemWrapper {},
+        ).expect("the symlink should have been detected");
+
+        assert_eq!(link_dir.join("git"), PathBuf::from(detected));
     }
 
     // Regression test against self-detection, which makes the wrapper execute
