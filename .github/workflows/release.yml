@@ -63,13 +63,9 @@ jobs:
           echo "RELEASE_TAG=$( echo ${GITHUB_REF##*/} )" >> $GITHUB_ENV
 
       - name: create archive
-        uses: master-atul/tar-action@v1.2.0
-        with:
-          command: c
-          cwd: ./target/${{ matrix.target }}/release/
-          files: |
-            ${{ matrix.executable }}
-          outPath: target/${{ matrix.target }}/release/${{ matrix.asset_name }}-${{ env.RELEASE_TAG }}.tar.gz
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar -czf "${{ matrix.asset_name }}-${{ env.RELEASE_TAG }}.tar.gz" "${{ matrix.executable }}"
 
       - name: checksum
         run: |
