@@ -70,6 +70,21 @@ impl Wrapper {
         execute(self.command(arguments))
     }
 
+    // The wrapper reads its environment: ALIAS_DRY_RUN and ALIAS_DEPTH are what
+    // a caller sets, SHELL is what a caller may not have. A run is spelled out
+    // in one line either way, and the locking stays out of the test.
+    fn run_with(&self, variable: &str, value: &str, arguments: &[&str]) -> Output {
+        let mut command = self.command(arguments);
+        command.env(variable, value);
+        execute(command)
+    }
+
+    fn run_without(&self, variable: &str, arguments: &[&str]) -> Output {
+        let mut command = self.command(arguments);
+        command.env_remove(variable);
+        execute(command)
+    }
+
     fn command(&self, arguments: &[&str]) -> Command {
         let mut command = Command::new(&self.binary);
         command.args(arguments);
@@ -304,9 +319,7 @@ fn the_wrapper_reports_its_own_version_before_the_version_of_the_target() {
 fn a_missing_shell_is_reported_instead_of_being_guessed() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\ntail = \"!docker logs -f\"");
 
-    let mut command = wrapper.command(&["tail", "web"]);
-    command.env_remove("SHELL");
-    let output = execute(command);
+    let output = wrapper.run_without("SHELL", &["tail", "web"]);
 
     assert_eq!(Some(1), output.status.code());
     assert!(
@@ -320,11 +333,7 @@ fn a_missing_shell_is_reported_instead_of_being_guessed() {
 fn everything_that_needs_no_shell_runs_without_one() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
 
-    let expanded = {
-        let mut command = wrapper.command(&["co", "topic"]);
-        command.env_remove("SHELL");
-        execute(command)
-    };
+    let expanded = wrapper.run_without("SHELL", &["co", "topic"]);
     assert_eq!(
         Some(0),
         expanded.status.code(),
@@ -333,11 +342,7 @@ fn everything_that_needs_no_shell_runs_without_one() {
     );
     assert_eq!(vec!["checkout", "main", "topic"], stdout_lines(&expanded));
 
-    let forwarded = {
-        let mut command = wrapper.command(&["status", "--short"]);
-        command.env_remove("SHELL");
-        execute(command)
-    };
+    let forwarded = wrapper.run_without("SHELL", &["status", "--short"]);
     assert_eq!(
         Some(0),
         forwarded.status.code(),
@@ -354,9 +359,7 @@ fn run_as_shell_hands_the_target_to_the_shell_as_its_first_argument() {
     let wrapper =
         Wrapper::fronting_argv_printer("run_as_shell=true\n\n[alias]\nco = \"checkout main\"");
 
-    let mut command = wrapper.command(&["co", "topic"]);
-    command.env("ALIAS_DRY_RUN", "1");
-    let printed = stdout(&execute(command));
+    let printed = stdout(&wrapper.run_with("ALIAS_DRY_RUN", "1", &["co", "topic"]));
 
     assert!(
         printed.contains("executable: /bin/sh"),
@@ -383,9 +386,7 @@ fn run_as_shell_without_a_shell_is_reported() {
     let wrapper =
         Wrapper::fronting_argv_printer("run_as_shell=true\n\n[alias]\nco = \"checkout main\"");
 
-    let mut command = wrapper.command(&["co"]);
-    command.env_remove("SHELL");
-    let output = execute(command);
+    let output = wrapper.run_without("SHELL", &["co"]);
 
     assert_eq!(Some(1), output.status.code(), "{}", stderr(&output));
     assert!(
@@ -401,9 +402,7 @@ fn run_as_shell_without_a_shell_is_reported() {
 fn a_dry_run_prints_the_command_instead_of_running_it() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
 
-    let mut command = wrapper.command(&["co", "topic"]);
-    command.env("ALIAS_DRY_RUN", "1");
-    let printed = stdout(&execute(command));
+    let printed = stdout(&wrapper.run_with("ALIAS_DRY_RUN", "1", &["co", "topic"]));
 
     assert!(
         printed.contains("[1] checkout"),
@@ -423,9 +422,7 @@ fn a_dry_run_prints_the_command_instead_of_running_it() {
 fn the_dry_run_variable_counts_as_set_whatever_its_value() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
 
-    let mut command = wrapper.command(&["co"]);
-    command.env("ALIAS_DRY_RUN", "0");
-    let printed = stdout(&execute(command));
+    let printed = stdout(&wrapper.run_with("ALIAS_DRY_RUN", "0", &["co"]));
 
     assert!(
         printed.contains("[1] checkout"),
@@ -445,9 +442,7 @@ fn the_dry_run_variable_counts_as_set_whatever_its_value() {
 fn a_dry_run_of_a_shell_alias_shows_what_the_shell_would_get() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\ntail = \"!docker logs -f\"");
 
-    let mut command = wrapper.command(&["tail", "web"]);
-    command.env("ALIAS_DRY_RUN", "1");
-    let printed = stdout(&execute(command));
+    let printed = stdout(&wrapper.run_with("ALIAS_DRY_RUN", "1", &["tail", "web"]));
 
     assert!(printed.contains("[1] -c"), "missing from:\n{}", printed);
     assert!(
@@ -530,18 +525,15 @@ fn every_call_carries_the_level_it_was_made_at() {
 
     assert_eq!(vec!["1"], stdout_lines(&wrapper.run(&["co"])));
 
-    let mut command = wrapper.command(&["co"]);
-    command.env("ALIAS_DEPTH", "4");
-    assert_eq!(vec!["5"], stdout_lines(&execute(command)));
+    let deeper = wrapper.run_with("ALIAS_DEPTH", "4", &["co"]);
+    assert_eq!(vec!["5"], stdout_lines(&deeper));
 }
 
 #[test]
 fn a_depth_that_is_not_a_number_counts_as_no_nesting() {
     let wrapper = Wrapper::fronting("[alias]\nco = \"checkout\"", write_nesting_printer);
 
-    let mut command = wrapper.command(&["co"]);
-    command.env("ALIAS_DEPTH", "not-a-number");
-    let output = execute(command);
+    let output = wrapper.run_with("ALIAS_DEPTH", "not-a-number", &["co"]);
 
     assert_eq!(Some(0), output.status.code(), "{}", stderr(&output));
     assert_eq!(vec!["1"], stdout_lines(&output));
@@ -553,9 +545,7 @@ fn a_depth_that_is_not_a_number_counts_as_no_nesting() {
 fn a_call_that_is_already_too_deep_is_refused() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
 
-    let mut command = wrapper.command(&["co"]);
-    command.env("ALIAS_DEPTH", "16");
-    let output = execute(command);
+    let output = wrapper.run_with("ALIAS_DEPTH", "16", &["co"]);
 
     assert_eq!(Some(1), output.status.code(), "{}", stderr(&output));
     assert!(
