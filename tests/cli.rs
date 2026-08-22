@@ -209,8 +209,7 @@ fn a_regular_alias_is_expanded_ahead_of_the_remaining_arguments() {
     assert_eq!(vec!["checkout", "main", "topic"], stdout_lines(&output));
 }
 
-// The alias is split the way git splits its own, and the quoted part has to
-// survive all the way into the target's argv as one argument.
+// The alias is split the way git splits its own.
 #[test]
 fn a_quoted_part_of_an_alias_arrives_as_a_single_argument() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\nci = 'commit -m \"work in progress\"'");
@@ -241,7 +240,7 @@ fn a_command_that_matches_no_alias_is_forwarded_untouched() {
     assert_eq!(vec!["status", "--short"], stdout_lines(&output));
 }
 
-// A group name on its own is not an alias, so it goes to the target as typed.
+// A group name on its own is not an alias.
 #[test]
 fn a_group_without_a_matching_member_is_forwarded_untouched() {
     let wrapper = Wrapper::fronting_argv_printer("[alias.docker]\nps = \"container ls\"");
