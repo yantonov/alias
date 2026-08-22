@@ -24,6 +24,10 @@ use tempfile::TempDir;
 // write.
 static EXECUTABLES: RwLock<()> = RwLock::new(());
 
+// A copy: an integration test cannot reach process::NESTING_LIMIT, and the two
+// tests on either side of the limit only mean something while the two agree.
+const NESTING_LIMIT: u32 = 16;
+
 struct Wrapper {
     // Kept alive: dropping it removes the directory the wrapper lives in.
     _directory: TempDir,
@@ -544,7 +548,7 @@ fn a_depth_that_is_not_a_number_counts_as_no_nesting() {
 fn a_call_that_is_already_too_deep_is_refused() {
     let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
 
-    let output = wrapper.run_with("ALIAS_DEPTH", "16", &["co"]);
+    let output = wrapper.run_with("ALIAS_DEPTH", &NESTING_LIMIT.to_string(), &["co"]);
 
     assert_eq!(Some(1), output.status.code(), "{}", stderr(&output));
     assert!(
@@ -557,6 +561,18 @@ fn a_call_that_is_already_too_deep_is_refused() {
         "the target ran after all: {}",
         stdout(&output)
     );
+}
+
+// Without this, tightening the constant would break nothing a test can see.
+#[test]
+fn a_call_one_level_below_the_limit_is_allowed() {
+    let wrapper = Wrapper::fronting_argv_printer("[alias]\nco = \"checkout main\"");
+
+    let depth = (NESTING_LIMIT - 1).to_string();
+    let output = wrapper.run_with("ALIAS_DEPTH", &depth, &["co"]);
+
+    assert_eq!(Some(0), output.status.code(), "{}", stderr(&output));
+    assert_eq!(vec!["checkout", "main"], stdout_lines(&output));
 }
 
 // The straightforward way into a loop: the config sits next to the wrapper, and
