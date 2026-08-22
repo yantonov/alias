@@ -49,7 +49,11 @@ fn is_the_wrapper_itself(target: &str, environment: &Environment) -> bool {
 // describes. Kept in one place because two spellings of the same line is how
 // they drifted apart before.
 pub fn version_line() -> String {
-    format!("alias wrapper version {}", env!("CARGO_PKG_VERSION"))
+    format!(
+        "alias wrapper version {} ({})",
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_HASH")
+    )
 }
 
 pub trait Handler {

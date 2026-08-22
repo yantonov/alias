@@ -303,7 +303,11 @@ fn the_wrapper_reports_its_own_version_before_the_version_of_the_target() {
     let printed = stdout_lines(&output);
 
     assert_eq!(
-        format!("alias wrapper version {}", env!("CARGO_PKG_VERSION")),
+        format!(
+            "alias wrapper version {} ({})",
+            env!("CARGO_PKG_VERSION"),
+            env!("GIT_HASH")
+        ),
         printed[0]
     );
     // What follows is the target's answer to --version, forwarded verbatim.
@@ -321,7 +325,11 @@ co = \"checkout\"",
     let printed = stdout_lines(&output);
 
     assert_eq!(
-        format!("alias wrapper version {}", env!("CARGO_PKG_VERSION")),
+        format!(
+            "alias wrapper version {} ({})",
+            env!("CARGO_PKG_VERSION"),
+            env!("GIT_HASH")
+        ),
         printed[0]
     );
     assert_eq!(Some(&"--help".to_string()), printed.last());
