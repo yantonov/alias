@@ -476,6 +476,29 @@ mod tests {
     }
 
     #[test]
+    fn executable_is_read_as_a_string() {
+        assert_eq!(
+            Some("/usr/bin/git".to_string()),
+            parse_config("executable = \"/usr/bin/git\"")
+                .get_executable()
+                .unwrap()
+        );
+        assert_eq!(None, empty_configuration().get_executable().unwrap());
+    }
+
+    #[test]
+    fn executable_that_is_not_a_string_is_rejected() {
+        let error = parse_config("executable = 42")
+            .get_executable()
+            .expect_err("a number is not a string");
+        assert!(
+            error.contains("executable"),
+            "the key has to be named: {}",
+            error
+        );
+    }
+
+    #[test]
     fn run_as_shell_is_read_as_a_boolean() {
         assert_eq!(
             Some(true),
