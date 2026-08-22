@@ -36,16 +36,12 @@ struct Wrapper {
 }
 
 impl Wrapper {
-    // 'aliases' is the part of the config below the executable line.
     fn fronting_argv_printer(aliases: &str) -> Wrapper {
-        Wrapper::new(aliases, write_argv_printer)
+        Wrapper::fronting(aliases, write_argv_printer)
     }
 
+    // 'aliases' is the part of the config below the executable line.
     fn fronting(aliases: &str, write_target: fn(&Path) -> PathBuf) -> Wrapper {
-        Wrapper::new(aliases, write_target)
-    }
-
-    fn new(aliases: &str, write_target: fn(&Path) -> PathBuf) -> Wrapper {
         let _guard = EXECUTABLES.write().unwrap_or_else(PoisonError::into_inner);
 
         let directory = tempfile::tempdir().expect("a temporary directory");
