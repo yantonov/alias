@@ -319,7 +319,7 @@ mod tests {
     }
 
     #[test]
-    fn merge_aliases() {
+    fn values_from_both_tables_are_kept() {
         let origin = get_table("section", "first", "value1");
         let override_config = get_table("section", "second", "value2");
         let result = merge_values(&origin, &override_config);
@@ -330,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn add_new_section() {
+    fn a_section_only_in_the_override_is_added() {
         let origin = get_table("section1", "first", "value1");
         let override_config = get_table("section2", "second", "value2");
         let result = merge_values(&origin, &override_config);
@@ -339,7 +339,7 @@ mod tests {
     }
 
     #[test]
-    fn redefine_alias() {
+    fn the_override_wins_when_both_define_the_same_key() {
         let origin = get_table("section", "key", "value1");
         let override_config = get_table("section", "key", "value2");
         let result = merge_values(&origin, &override_config);
@@ -356,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_alias_finds_flat_alias() {
+    fn a_flat_alias_resolves_and_consumes_its_name() {
         let config = parse_config("[alias]\nco = \"checkout main\"");
         match config.resolve_alias(&["co".to_string()]).unwrap() {
             Some((Alias::RegularAlias(args), consumed)) => {
@@ -368,7 +368,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_alias_finds_one_level_group_alias() {
+    fn an_alias_in_a_group_consumes_the_group_name_as_well() {
         let config = parse_config("[alias.docker]\nps = \"container ls\"");
         match config
             .resolve_alias(&["docker".to_string(), "ps".to_string()])
@@ -383,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_alias_finds_nested_group_alias() {
+    fn an_alias_in_a_nested_group_consumes_every_level_above_it() {
         let config = parse_config("[alias.docker.container]\nls = \"container ls\"");
         match config
             .resolve_alias(&[
@@ -402,7 +402,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_alias_returns_none_for_unknown() {
+    fn a_name_that_matches_no_alias_resolves_to_nothing() {
         let config = parse_config("[alias]\nfoo = \"bar\"");
         assert!(
             config
@@ -413,7 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_alias_returns_none_when_args_exhausted_at_group() {
+    fn a_group_name_on_its_own_resolves_to_nothing() {
         let config = parse_config("[alias.docker]\nps = \"container ls\"");
         assert!(
             config
@@ -424,7 +424,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_alias_shell_alias_at_nested_depth() {
+    fn a_shell_alias_in_a_nested_group_keeps_its_command() {
         let config = parse_config("[alias.docker.container]\nclean = \"!docker system prune\"");
         match config
             .resolve_alias(&[
@@ -443,7 +443,7 @@ mod tests {
     }
 
     #[test]
-    fn list_alias_tree_flat_and_nested() {
+    fn the_alias_tree_carries_flat_aliases_and_every_level_of_a_group() {
         let config = parse_config(
             "[alias]\nfoo = \"bar\"\n\n[alias.docker.container]\nls = \"container ls\"",
         );
@@ -561,13 +561,13 @@ mod tests {
     }
 
     #[test]
-    fn empty_value_produces_no_arguments() {
+    fn an_empty_value_produces_no_arguments() {
         assert!(split("").is_empty());
         assert!(split("   ").is_empty());
     }
 
     #[test]
-    fn trailing_backslash_is_rejected() {
+    fn a_trailing_backslash_is_rejected() {
         assert_eq!(
             Err("ends with a backslash".to_string()),
             split_arguments("-m a\\")
@@ -581,7 +581,7 @@ mod tests {
     }
 
     #[test]
-    fn unclosed_quote_is_rejected() {
+    fn an_unclosed_quote_is_rejected() {
         assert_eq!(
             Err("unclosed quote".to_string()),
             split_arguments("-m unbalanced\"quote")
@@ -593,7 +593,7 @@ mod tests {
     }
 
     #[test]
-    fn unclosed_quote_error_names_the_alias() {
+    fn the_unclosed_quote_error_names_the_alias() {
         let config = parse_config("[alias]\npsn = \"ps --format=\\\"unclosed\"");
         let error = match config.resolve_alias(&["psn".to_string()]) {
             Err(error) => error,
@@ -612,7 +612,7 @@ mod tests {
     }
 
     #[test]
-    fn shell_alias_is_not_split() {
+    fn a_shell_alias_is_not_split() {
         let config = parse_config("[alias]\nclean = \"!rm -rf  *.tmp\"");
         match config.resolve_alias(&["clean".to_string()]).unwrap() {
             Some((Alias::ShellAlias(cmd), _)) => assert_eq!("rm -rf  *.tmp", cmd),
@@ -621,7 +621,7 @@ mod tests {
     }
 
     #[test]
-    fn quoted_argument_survives_alias_resolution() {
+    fn a_quoted_argument_survives_alias_resolution() {
         let config = parse_config("[alias]\nci = 'commit -m \"wip\"'");
         match config.resolve_alias(&["ci".to_string()]).unwrap() {
             Some((Alias::RegularAlias(args), _)) => {
@@ -632,7 +632,7 @@ mod tests {
     }
 
     #[test]
-    fn detected_windows_path_is_written_as_valid_toml() {
+    fn a_detected_windows_path_is_written_as_valid_toml() {
         // '\n' and '\t' are deliberate: those two are valid toml escapes, so a
         // hand quoted path carrying them parses and comes back corrupted.
         let detected = r"tools\new\target dir\app";
@@ -647,7 +647,7 @@ mod tests {
     }
 
     #[test]
-    fn undetected_executable_is_written_as_a_comment() {
+    fn an_undetected_executable_is_written_as_a_comment() {
         let line = executable_line(None);
         assert!(
             line.starts_with('#'),
@@ -658,7 +658,7 @@ mod tests {
     }
 
     #[test]
-    fn get_configuration_creates_default_config_when_missing() {
+    fn a_config_file_that_is_not_there_is_created() {
         let dir = tempfile::tempdir().unwrap();
         let env = Environment::for_testing(dir.path().to_path_buf());
         let result = get_configuration(&env);
@@ -674,7 +674,7 @@ mod tests {
     // system, while a read only bit does not (windows lets a file be created
     // in a directory carrying that attribute).
     #[test]
-    fn get_configuration_survives_a_directory_it_cannot_write_to() {
+    fn a_config_file_that_cannot_be_created_leaves_the_configuration_empty() {
         let dir = tempfile::tempdir().unwrap();
         let unwritable = dir.path().join("missing");
         let env = Environment::for_testing(unwritable.clone());
@@ -690,7 +690,7 @@ mod tests {
     }
 
     #[test]
-    fn get_configuration_reads_existing_config() {
+    fn a_config_file_that_is_there_is_read() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("config.toml"),
@@ -706,7 +706,7 @@ mod tests {
     }
 
     #[test]
-    fn get_configuration_merges_override_file() {
+    fn aliases_from_the_override_file_are_added() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("config.toml"),
@@ -731,7 +731,7 @@ mod tests {
     }
 
     #[test]
-    fn get_configuration_override_replaces_existing_alias() {
+    fn an_alias_the_override_file_redefines_is_replaced() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("config.toml"),

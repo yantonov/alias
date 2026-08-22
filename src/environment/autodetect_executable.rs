@@ -185,7 +185,7 @@ mod tests {
     }
 
     #[test]
-    fn target_executable_can_be_found_later_in_the_path() {
+    fn the_target_is_found_further_along_the_path() {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/bin/alias", &TestFileDescriptor::file());
         fs.add("/usr/bin/alias", &TestFileDescriptor::file());
@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn directory_named_after_the_target_is_skipped() {
+    fn a_directory_named_after_the_target_is_skipped() {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/bin/alias", &TestFileDescriptor::file());
         fs.add("/usr/bin/alias", &TestFileDescriptor::directory());
@@ -206,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn target_executable_cannot_be_found_later_in_the_path() {
+    fn a_match_before_the_wrapper_in_the_path_is_not_the_target() {
         let mut fs = TestFileSystemWrapper::create();
         fs.add(
             "/home/username/alias_app/alias",
@@ -223,14 +223,14 @@ mod tests {
     }
 
     #[test]
-    fn alias_path_does_not_exist_in_path() {
+    fn a_path_without_a_matching_name_detects_nothing() {
         let fs = TestFileSystemWrapper::create();
         let path = make_path(&["/bin", "/usr/bin"]);
         assert!(detect("/home/username/app", "alias", &path, &fs).is_none());
     }
 
     #[test]
-    fn alias_path_exists_but_target_executable_doesnt() {
+    fn nothing_is_detected_when_only_the_wrapper_carries_the_name() {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/home/username/app/alias", &TestFileDescriptor::file());
         let path = make_path(&["/home/username/app", "/bin", "/usr/bin"]);
@@ -238,7 +238,7 @@ mod tests {
     }
 
     #[test]
-    fn wrapper_doesnt_exist_in_path_try_to_find_first_executable_that_has_the_same_name() {
+    fn the_first_match_in_the_path_is_taken_when_the_wrapper_is_not_in_it() {
         let mut fs = TestFileSystemWrapper::create();
         fs.add("/usr/bin/alias", &TestFileDescriptor::file());
         let path = make_path(&["/bin", "/usr/bin"]);
@@ -253,7 +253,7 @@ mod tests {
         // The layout node ships: a shell script with no extension, a .cmd shim
         // and a .ps1 shim. Only the .cmd one can be started as a process.
         #[test]
-        fn cmd_shim_is_found_among_the_shims_of_the_same_tool() {
+        fn a_cmd_shim_is_found_among_the_shims_of_the_same_tool() {
             let mut fs = TestFileSystemWrapper::create();
             fs.add("/wrapper/npm.exe", &TestFileDescriptor::file());
             fs.add("/tools/npm", &TestFileDescriptor::file());
@@ -265,7 +265,7 @@ mod tests {
         }
 
         #[test]
-        fn bat_shim_is_found() {
+        fn a_bat_shim_is_found_as_well() {
             let mut fs = TestFileSystemWrapper::create();
             fs.add("/wrapper/gradle.exe", &TestFileDescriptor::file());
             fs.add("/tools/gradle.bat", &TestFileDescriptor::file());
@@ -312,12 +312,12 @@ mod tests {
     }
 
     #[test]
-    fn same_directory_matches_identical_paths() {
+    fn identical_paths_are_the_same_directory() {
         assert!(same_directory(Path::new("/usr/bin"), Path::new("/usr/bin")));
     }
 
     #[test]
-    fn same_directory_rejects_different_paths() {
+    fn different_paths_are_not_the_same_directory() {
         assert!(!same_directory(
             Path::new("/usr/bin"),
             Path::new("/usr/local/bin")
@@ -326,7 +326,7 @@ mod tests {
 
     #[cfg(any(windows, target_os = "macos"))]
     #[test]
-    fn same_directory_ignores_case_on_case_insensitive_filesystems() {
+    fn case_is_ignored_on_a_case_insensitive_filesystem() {
         assert!(same_directory(
             Path::new("/Users/bob/BIN"),
             Path::new("/users/bob/bin")
@@ -335,7 +335,7 @@ mod tests {
 
     #[cfg(not(any(windows, target_os = "macos")))]
     #[test]
-    fn same_directory_keeps_case_on_case_sensitive_filesystems() {
+    fn case_is_kept_on_a_case_sensitive_filesystem() {
         assert!(!same_directory(
             Path::new("/home/bob/BIN"),
             Path::new("/home/bob/bin")
@@ -345,7 +345,7 @@ mod tests {
     // Uses the real filesystem: the fake one cannot express symlinks.
     #[cfg(unix)]
     #[test]
-    fn symlink_to_the_target_executable_is_detected() {
+    fn a_symlink_to_the_target_is_detected() {
         let dir = tempfile::tempdir().unwrap();
         let wrapper_dir = dir.path().join("git-aliases");
         let link_dir = dir.path().join("link");
@@ -374,7 +374,7 @@ mod tests {
     // is the case-insensitive behaviour of the volume itself.
     #[cfg(any(windows, target_os = "macos"))]
     #[test]
-    fn wrapper_is_skipped_when_path_entry_case_differs_from_disk() {
+    fn the_wrapper_is_skipped_when_the_path_spells_it_in_another_case() {
         let dir = tempfile::tempdir().unwrap();
         let wrapper_dir = dir.path().join("uv-aliases");
         let real_dir = dir.path().join("real");

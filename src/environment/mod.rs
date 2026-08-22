@@ -103,7 +103,7 @@ mod tests {
     }
 
     #[test]
-    fn a_missing_shell_is_reported_only_when_it_is_asked_for() {
+    fn a_missing_shell_is_reported_when_it_is_asked_for() {
         let environment = Environment {
             shell: None,
             ..environment_with(vec!["git".to_string()])

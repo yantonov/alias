@@ -42,7 +42,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn expand_existing_var() {
+    fn a_var_that_is_set_is_replaced_by_its_value() {
         unsafe {
             env::set_var("ENV_VAR", "yes");
         }
@@ -50,7 +50,7 @@ mod tests {
     }
 
     #[test]
-    fn not_existing_var_wait_unmodified_string() {
+    fn a_var_that_is_not_set_is_left_as_written() {
         assert_eq!(
             "${NOT_EXISTING_VAR}/not_replaced",
             expand_env_var("${NOT_EXISTING_VAR}/not_replaced")
@@ -82,28 +82,28 @@ mod tests {
     }
 
     #[test]
-    fn empty_string_returns_empty_string() {
+    fn an_empty_string_stays_empty() {
         assert_eq!("", expand_env_var(""));
     }
 
     #[test]
-    fn string_without_vars_is_returned_unchanged() {
+    fn a_string_without_vars_is_left_unchanged() {
         assert_eq!("no/vars/here", expand_env_var("no/vars/here"));
     }
 
     #[test]
-    fn empty_name_is_not_a_placeholder() {
+    fn an_empty_name_is_not_a_placeholder() {
         assert_eq!("${}", expand_env_var("${}"));
     }
 
     #[test]
-    fn unterminated_placeholder_is_left_alone() {
+    fn an_unterminated_placeholder_is_left_alone() {
         assert_eq!("${NOT_CLOSED", expand_env_var("${NOT_CLOSED"));
         assert_eq!("${", expand_env_var("${"));
     }
 
     #[test]
-    fn name_containing_a_brace_is_not_a_placeholder() {
+    fn a_name_containing_a_brace_is_not_a_placeholder() {
         assert_eq!("${A{B}", expand_env_var("${A{B}"));
     }
 

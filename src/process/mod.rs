@@ -175,12 +175,12 @@ mod presentable_stderr_tests {
     }
 
     #[test]
-    fn target_that_accepted_the_flag_shows_what_it_said() {
+    fn stderr_of_a_target_that_succeeded_is_shown() {
         assert_eq!("a warning", present("a warning", Some(0)));
     }
 
     #[test]
-    fn target_that_rejected_the_flag_has_it_dropped() {
+    fn stderr_of_a_target_that_failed_is_dropped() {
         assert_eq!(
             "",
             present("error: unrecognized option '--aliases'", Some(2))
@@ -188,30 +188,30 @@ mod presentable_stderr_tests {
     }
 
     #[test]
-    fn silent_target_shows_nothing() {
+    fn a_target_that_said_nothing_shows_nothing() {
         assert_eq!("", present("", Some(0)));
         assert_eq!("", present("", None));
     }
 }
 
 #[cfg(all(test, unix))]
-mod tests {
+mod exit_code_tests {
     use super::*;
     use std::os::unix::process::ExitStatusExt;
 
     #[test]
-    fn normal_exit_keeps_its_own_code() {
+    fn a_normal_exit_keeps_its_own_code() {
         assert_eq!(Some(3), exit_code(ExitStatus::from_raw(3 << 8)));
     }
 
     #[test]
-    fn child_killed_by_signal_reports_128_plus_signal() {
+    fn a_child_killed_by_a_signal_reports_128_plus_the_signal() {
         // SIGKILL, the way a shell would report it: 128 + 9
         assert_eq!(Some(137), exit_code(ExitStatus::from_raw(9)));
     }
 
     #[test]
-    fn child_killed_by_sigint_reports_130() {
+    fn a_child_killed_by_sigint_reports_130() {
         assert_eq!(Some(130), exit_code(ExitStatus::from_raw(2)));
     }
 }
