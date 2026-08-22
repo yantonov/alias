@@ -33,9 +33,6 @@ fn get_handler(environment: &environment::Environment) -> Box<dyn Handler> {
 }
 
 fn main() {
-    // Before anything is read from disk: a call that is already too deep is a
-    // loop being unwound, and the sooner it stops the fewer processes are left
-    // standing behind it.
     if let Err(e) = process::check_nesting_limit() {
         eprintln!("{}", e);
         std::process::exit(1);

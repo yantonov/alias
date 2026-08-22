@@ -36,9 +36,6 @@ fn get_call_context(
     }
 }
 
-// Whatever the arguments turned out to be, an expanded alias or the untouched
-// command line, they reach the target the same way.
-//
 // This is the only path a shell is looked up on outside of shell aliases, and
 // it is looked up here rather than by the caller: run_as_shell is off by
 // default, and a wrapper that never turns it on must not depend on a shell
@@ -93,8 +90,6 @@ fn handle_shell_alias(
     })
 }
 
-// A dry run prints the command that would have been executed and stops.
-//
 // The switch is an environment variable rather than a flag on purpose: the
 // command line then reaches the resolution untouched, so what gets printed is
 // what would have run, rather than a reconstruction of it. No name of ours can

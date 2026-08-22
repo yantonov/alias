@@ -21,8 +21,6 @@ impl Environment {
         &self.executable_dir
     }
 
-    // The path current_exe() reported, put back together from the two halves
-    // it was split into on the way in.
     pub fn executable_path(&self) -> PathBuf {
         self.executable_dir.join(&self.executable_name)
     }

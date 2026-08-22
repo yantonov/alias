@@ -1,8 +1,7 @@
 use std::env;
 
-// Expands ${NAME} placeholders. Anything else, a name that is not set in the
-// environment included, is left in place untouched: what counts as a
-// placeholder is spelled out one per test below.
+// An unset name is left standing as it was written: a path with a hole in it
+// is something a person can recognize, an empty string is not.
 pub fn expand_env_var(path: &str) -> String {
     let mut result = String::with_capacity(path.len());
     let mut rest = path;
@@ -26,7 +25,6 @@ pub fn expand_env_var(path: &str) -> String {
                 rest = &placeholder[placeholder_len..];
             }
             None => {
-                // Not a placeholder after all, resume scanning past the '$'.
                 result.push('$');
                 rest = &placeholder[1..];
             }

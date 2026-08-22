@@ -70,9 +70,8 @@ impl Wrapper {
         execute(self.command(arguments))
     }
 
-    // The wrapper reads its environment: ALIAS_DRY_RUN and ALIAS_DEPTH are what
-    // a caller sets, SHELL is what a caller may not have. A run is spelled out
-    // in one line either way, and the locking stays out of the test.
+    // ALIAS_DRY_RUN and ALIAS_DEPTH are what a caller sets, SHELL is what a
+    // caller may not have.
     fn run_with(&self, variable: &str, value: &str, arguments: &[&str]) -> Output {
         let mut command = self.command(arguments);
         command.env(variable, value);
