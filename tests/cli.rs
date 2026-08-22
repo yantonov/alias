@@ -314,6 +314,60 @@ fn the_wrapper_reports_its_own_version_before_the_version_of_the_target() {
     assert_eq!(Some(&"--version".to_string()), printed.get(1));
 }
 
+#[test]
+fn the_wrapper_reports_its_own_help_before_the_help_of_the_target() {
+    let wrapper = Wrapper::fronting_argv_printer(
+        "[alias]
+co = \"checkout\"",
+    );
+
+    let output = wrapper.run(&["--help"]);
+    let printed = stdout_lines(&output);
+
+    assert_eq!(
+        format!("alias wrapper version {}", env!("CARGO_PKG_VERSION")),
+        printed[0]
+    );
+    assert_eq!(Some(&"--help".to_string()), printed.last());
+}
+
+// A target that cannot be started prints nothing, so what is left on stdout is
+// the wrapper's own answer and nothing else.
+#[test]
+fn the_help_names_everything_the_wrapper_answers_to() {
+    let wrapper = Wrapper::fronting("", write_nothing);
+
+    let printed = stdout(&wrapper.run(&["--help"]));
+
+    for answered in ["--aliases", "--version", "--help", "ALIAS_DRY_RUN"] {
+        assert!(
+            printed.contains(answered),
+            "{} missing from:
+{}",
+            answered,
+            printed
+        );
+    }
+}
+
+#[test]
+fn a_config_file_that_does_not_parse_is_reported() {
+    let wrapper = Wrapper::fronting(
+        "[alias
+co = broken",
+        write_nothing,
+    );
+
+    let output = wrapper.run(&["status"]);
+
+    assert_eq!(Some(1), output.status.code(), "{}", stderr(&output));
+    assert!(
+        stderr(&output).contains("Cannot parse config file"),
+        "unexpected error: {}",
+        stderr(&output)
+    );
+}
+
 // The shell is where aliases prefixed with ! are run, and the app refuses to
 // guess one rather than picking a shell of its own. This is what a windows user
 // outside git bash runs into.
