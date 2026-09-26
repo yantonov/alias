@@ -228,16 +228,6 @@ fn executable_line(detected: Option<String>) -> String {
     }
 }
 
-// The sample config is a convenience, not a prerequisite. A wrapper is
-// routinely installed into a directory nobody can write to: /usr/local/bin
-// owned by root, an immutable image, the read only nix store. Failing to start
-// there would take down plain forwarding as well, which needs nothing from the
-// config file at all.
-//
-// So a sample that cannot be created is stepped over, and quietly: a proxy
-// that does its job has no business printing a warning on every single call.
-// The absence is reported by --aliases, which is the screen someone opens when
-// the aliases they expected are not there.
 fn create_config_if_needed(config_file_path: &Path, environment: &Environment) {
     if config_file_path.exists() {
         return;
