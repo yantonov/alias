@@ -40,7 +40,6 @@ impl Wrapper {
         Wrapper::fronting(aliases, write_argv_printer)
     }
 
-    // 'aliases' is the part of the config below the executable line.
     fn fronting(aliases: &str, write_target: fn(&Path) -> PathBuf) -> Wrapper {
         let _guard = EXECUTABLES.write().unwrap_or_else(PoisonError::into_inner);
 
@@ -236,7 +235,6 @@ fn a_command_that_matches_no_alias_is_forwarded_untouched() {
     assert_eq!(vec!["status", "--short"], stdout_lines(&output));
 }
 
-// A group name on its own is not an alias.
 #[test]
 fn a_group_without_a_matching_member_is_forwarded_untouched() {
     let wrapper = Wrapper::fronting_argv_printer("[alias.docker]\nps = \"container ls\"");
