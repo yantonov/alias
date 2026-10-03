@@ -2,6 +2,7 @@
 name = "alias"
 version = "0.3.0"
 authors = ["Yury Antonov <1390348+yantonov@users.noreply.github.com>"]
+license = "Apache-2.0"
 edition = "2024"
 rust-version = "1.85"
 
