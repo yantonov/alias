@@ -63,8 +63,3 @@ main.rs → get_handler() → Handler::handle()
 ```
 
 The config is loaded once at startup from `config.toml` (and optionally merged with `override.toml`). The environment is collected from `std::env::args()` and environment variables. Handlers are stateless: config and environment are passed into `handle()`.
-
-## Project state
-- Current version: 0.3.0
-- Tests cover: all alias types (regular, shell), groups and nested groups, dry run, loop detection, nesting limit, quoted arguments, env variables in `executable`, auto-detection of the target binary, shell aliases without `SHELL`
-- Build targets: linux (x86_64, aarch64), windows (x86_64), macos (arm64, x86_64)
