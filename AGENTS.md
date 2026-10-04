@@ -8,12 +8,13 @@ A thin wrapper that replaces the target executable: it intercepts calls, expands
 Rust, edition 2024, MSRV 1.85. Built with Cargo, shipped as a single binary with no external runtime dependencies.
 
 ## Commands
-- Install toolchain: `rustup default stable`
-- Build: `cargo build`
-- Tests: `cargo test`
-- Release build (size-optimized): `cargo build --release`
-- Lint + format: `cargo clippy --all-targets -- -D warnings && cargo fmt --check`
-- Full verification (tests + lint + format): `cargo test && cargo clippy --all-targets -- -D warnings && cargo fmt --check`
+All commands are reachable through `make`. Run `make help` to see every target.
+- Setup: `make setup`
+- Build: `make build`
+- Tests: `make test`
+- Release build: `make release`
+- Lint + format: `make lint`
+- Full verification: `make check`
 
 ## Hard constraints (MUST)
 - The wrapper must never call itself endlessly. Loops are detected: if `executable` points at the wrapper itself — an error before anything runs; if recursion happens through a shell alias — depth is capped by `ALIAS_DEPTH` (ceiling 16).
@@ -25,7 +26,7 @@ Rust, edition 2024, MSRV 1.85. Built with Cargo, shipped as a single binary with
 - Environment variables in `executable` are expanded (`${VAR}` syntax).
 
 ## Definition of Done
-A feature is done = `cargo test` is green on all three platforms in CI + `cargo clippy` and `cargo fmt` are clean + `tests/cli.rs` has an E2E test that demonstrates the feature by running the wrapper as a separate process.
+A feature is done = `make check` is green (locally and on all three platforms in CI) + `tests/cli.rs` has an E2E test that demonstrates the feature by running the wrapper as a separate process.
 
 "Code written" is not done.
 
