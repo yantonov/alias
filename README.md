@@ -187,4 +187,4 @@ A few more realistic examples:
 4. [cdt aliases](https://github.com/yantonov/cdt-aliases)  
 5. [gw aliases](https://github.com/yantonov/gw-aliases)  
 6. [arc aliases](https://github.com/yantonov/arc-aliases)  
-7. [ya tool aliases](https://github.com/yantonov/ya-aliases)  
+
